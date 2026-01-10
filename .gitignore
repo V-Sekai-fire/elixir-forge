@@ -1,4 +1,4 @@
-# Python virtual environment
+# Python environments and cache
 .venv/
 venv/
 __pycache__/
@@ -6,124 +6,147 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-
-# Pythonx cache
 .pythonx/
 
-# Elixir
+# Elixir build artifacts
 _build/
 deps/
 mix.lock
 *.ez
 
-# Model checkpoints
-checkpoints/
+# ML Models and weights (large files)
+pretrained_weights/
 *.pth
 *.pt
 *.ckpt
 *.safetensors
+checkpoints/
 
-# Output files
+# Output files and uploads
 output/
 uploads/
 
-# Temporary files in thirdparty (generated during processing)
-thirdparty/*_temp_*.obj
-thirdparty/*_temp_*.binvox
-thirdparty/*_temp_*.mtl
-thirdparty/*_normalized.obj
-thirdparty/*_normalized.binvox
+# Database files (SQLite)
+*.db
+*.db-*
 
-# Configuration files (generated)
+# Generated configuration files
 config.json
-# But allow checkpoints/config.json (model configs)
-!checkpoints/config.json
 
-# OS files
+# OS and editor files
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 *~
-
-# IDE files
 .vscode/
 .idea/
 *.iml
 
-# Logs
+# Logs and crash dumps
 *.log
 logs/
 lightning_logs/
-
-# Temporary files
-*.tmp
-*.temp
-
-# RigNet temporary files
-*_temp_rignet.obj
-*_temp_rignet_normalized.obj
-*_temp_rignet_normalized.binvox
-*_temp_rignet.mtl
-*_temp_rignet_rig.txt
-*_normalized.obj
-*_normalized.binvox
-*_simplified.obj
-
-# Pretrained weights (large model files)
-pretrained_weights/
-
-# Erlang crash dumps
 *.dump
 erl_crash.dump
 
-# Intermediate processing files
+# Temporary and intermediate files
+*.tmp
+*.temp
 *.npz
-# But keep example/test npz files if needed
-!thirdparty/UniRig/examples/**/*.npz
 
-# Generated output files in examples directory (FBX, OBJ, etc.)
-# Keep GLB input files, but ignore generated outputs
-thirdparty/UniRig/examples/**/*.fbx
-thirdparty/UniRig/examples/**/*.obj
-# Allow GLB files (these are input examples)
-!thirdparty/UniRig/examples/**/*.glb
+# Third-party processing temporary files
+thirdparty/*_temp_*.obj
+thirdparty/*_temp_*.binvox
+thirdparty/*_temp_*.mtl
+thirdparty/*_normalized.obj
+thirdparty/*_normalized.binvox
+thirdparty/*_temp_rignet.obj
+thirdparty/*_temp_rignet_normalized.obj
+thirdparty/*_temp_rignet_normalized.binvox
+thirdparty/*_temp_rignet.mtl
+thirdparty/*_temp_rignet_rig.txt
+thirdparty/*_simplified.obj
 
-# Blender cache
-*.blend1
-*.blend2
-
-# Meshoptimizer build artifacts
-thirdparty/blender-meshoptimizer/meshoptimizer/
-
-# Jupyter/Notebook checkpoints
-.ipynb_checkpoints/
-
-# Hugging Face cache
-.cache/
-*.cache
-
-# UniRig intermediate files
+# UniRig processing artifacts
 thirdparty/UniRig/logs/
 thirdparty/UniRig/lightning_logs/
 thirdparty/UniRig/erl_crash.dump
+thirdparty/UniRig/examples/**/*.fbx
+thirdparty/UniRig/examples/**/*.obj
+!thirdparty/UniRig/examples/**/*.npz
+!thirdparty/UniRig/examples/**/*.glb
 
-# CockroachDB data and logs
-cockroach-data/
-cockroach.err
-cockroach.out
-cockroach-certs/
+# Blender and 3D processing
+*.blend1
+*.blend2
+thirdparty/blender-meshoptimizer/meshoptimizer/
 
-# CockroachDB binaries (large files)
-tools/cockroach-v22.1.22.windows-6.2-amd64/
-tools/cockroach.zip
+# Jupyter/Notebook files
+.ipynb_checkpoints/
 
-# Node modules
-node_modules
+# ML and HF cache
+.cache/
+*.cache
 
-# Production configuration (contains secrets)
+# Node.js
+node_modules/
+
+# Production and secret configs
 config/prod.exs
-
-# Environment specific config files
 config/*.local.exs
 config/*.secret.exs
+
+# Distillery/Mix releases
+rel/*/releases/*/cookie
+
+# Release archives
+*.tar.gz
+# task_progress
+
+You've made 28 API requests without a task_progress parameter. It is strongly recomended that you create one to track remaining work.
+
+
+1. To create or update a todo list, include the task_progress parameter in the next tool call
+2. Review each item and update its status:
+   - [x]
+   - Keep incomplete items as: - [ ]
+   - Add new items if you discover additional steps
+3. Modify the list as needed:
+		- Add any new steps you've discovered
+		- Reorder if the sequence has changed
+4. Ensure the list accurately reflects the current state
+
+**Remember:** Keeping the task_progress list updated helps track progress and ensures nothing is missed.
+<environment_details>
+# Visual Studio Code Visible Files
+.gitignore
+
+# Visual Studio Code Open Tabs
+lib/forge/application.ex
+lib/forge/repo.ex
+lib/forge/server.ex
+config/config.exs
+config/runtime.exs
+lib/mix/tasks/qwen3vl.ex
+test/forge_test.exs
+lib/forge/qwen3vl.ex
+lib/forge/qwen3vl/worker.ex
+lib/forge/zimage/worker.ex
+lib/ix/tasks/zimage.ex
+docs/third-party-tools.md
+README.md
+docs/user-guide.md
+docs/api.md
+mix.exs
+lib/forge/zimage.ex
+docs/setup.md
+
+# Current Time
+1/10/2026, 12:25:19 AM (America/Vancouver, UTC-8:00)
+
+# Context Window Usage
+160,726 / 256K tokens used (63%)
+
+# Current Mode
+ACT MODE

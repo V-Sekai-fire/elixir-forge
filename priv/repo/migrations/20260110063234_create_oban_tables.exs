@@ -1,33 +1,28 @@
-defmodule LivebookNx.Repo.Migrations.CreateObanTables do
+defmodule Forge.Repo.Migrations.CreateObanTables do
   use Ecto.Migration
 
   def change do
-    # Create Oban jobs table
+    # Create Oban jobs table (SQLite compatible)
     execute """
     CREATE TABLE oban_jobs (
-      id bigserial not null primary key,
-      state text not null,
-      queue text not null default 'default',
-      worker text not null,
-      args jsonb not null default '{}',
-      errors jsonb not null default '[]',
-      attempt integer not null default 0,
-      max_attempts integer not null default 20,
-      inserted_at timestamp without time zone not null default now(),
-      scheduled_at timestamp without time zone not null default now(),
-      attempted_at timestamp without time zone,
-      completed_at timestamp without time zone,
-      attempted_by text[],
-      discarded_at timestamp without time zone,
-      priority integer not null default 0,
-      tags text[] not null default '{}',
-      meta jsonb not null default '{}',
-      cancelled_at timestamp without time zone,
-      CONSTRAINT attempt_range CHECK (attempt >= 0 AND attempt <= max_attempts),
-      CONSTRAINT priority_range CHECK (priority >= 0 AND priority <= 3),
-      CONSTRAINT queue_length CHECK (char_length(queue) > 0 AND char_length(queue) < 128),
-      CONSTRAINT worker_length CHECK (char_length(worker) > 0 AND char_length(worker) < 128),
-      CONSTRAINT state_length CHECK (char_length(state) > 0)
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      state TEXT NOT NULL CHECK(length(state) > 0),
+      queue TEXT NOT NULL DEFAULT 'default' CHECK(length(queue) > 0 AND length(queue) < 128),
+      worker TEXT NOT NULL CHECK(length(worker) > 0 AND length(worker) < 128),
+      args TEXT NOT NULL DEFAULT '{}',
+      errors TEXT NOT NULL DEFAULT '[]',
+      attempt INTEGER NOT NULL DEFAULT 0 CHECK(attempt >= 0),
+      max_attempts INTEGER NOT NULL DEFAULT 20,
+      inserted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      scheduled_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      attempted_at DATETIME,
+      completed_at DATETIME,
+      attempted_by TEXT,
+      discarded_at DATETIME,
+      priority INTEGER NOT NULL DEFAULT 0 CHECK(priority >= 0 AND priority <= 3),
+      tags TEXT NOT NULL DEFAULT '{}',
+      meta TEXT NOT NULL DEFAULT '{}',
+      cancelled_at DATETIME
     );
     """
 

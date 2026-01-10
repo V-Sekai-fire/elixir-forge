@@ -111,11 +111,25 @@ defmodule Forge.ZImage do
   end
 
   @doc """
+  Runs image generation with a pre-configured struct.
+  This is the internal entry point for workers.
+  """
+  @spec run(t()) :: {:ok, Path.t()} | {:error, term()}
+  def run(%__MODULE__{} = config) do
+    case validate_config(config) do
+      :ok ->
+        do_generate(config)
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
   Queues an image generation job for asynchronous processing.
 
   ## Examples
 
-      iex> LivebookNx.ZImage.queue_generation("a beautiful landscape")
+      iex> Forge.ZImage.queue_generation("a beautiful landscape")
       {:ok, %Oban.Job{}}
   """
   @spec queue_generation(String.t(), keyword()) :: {:ok, Oban.Job.t()} | {:error, term()}

@@ -1,9 +1,9 @@
-defmodule LivebookNx.MixProject do
+defmodule Forge.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :livebook_nx,
+      app: :forge,
       version: "0.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
@@ -14,11 +14,11 @@ defmodule LivebookNx.MixProject do
 
   def releases do
     [
-      livebook_nx: [
+      forge: [
         include_executables_for: [:unix, :windows],
         include_erts: true,
         applications: [
-          livebook_nx: :permanent,
+          forge: :permanent,
           runtime_tools: :permanent
         ],
         steps: [:assemble, :tar],
@@ -31,39 +31,8 @@ defmodule LivebookNx.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {LivebookNx.Application, []}
+      mod: {Forge.Application, []}
     ]
-  end
-
-  # Include CockroachDB binary in the release
-  defp include_cockroachdb(release) do
-    cockroach_path = "tools/cockroach-v22.1.22.windows-6.2-amd64/cockroach.exe"
-    release_path = Path.join([release.path, "cockroach.exe"])
-
-    if File.exists?(cockroach_path) do
-      File.cp!(cockroach_path, release_path)
-      Mix.shell().info("Included CockroachDB binary in release")
-    else
-      Mix.shell().error("CockroachDB binary not found at #{cockroach_path}")
-    end
-
-    release
-  end
-
-  # Include certificates in the release
-  defp include_certificates(release) do
-    certs_dir = "cockroach-certs"
-    release_certs_dir = Path.join(release.path, "cockroach-certs")
-
-    if File.exists?(certs_dir) do
-      File.mkdir_p!(release_certs_dir)
-      File.cp_r!(certs_dir, release_certs_dir)
-      Mix.shell().info("Included certificates in release")
-    else
-      Mix.shell().error("Certificates directory not found at #{certs_dir}")
-    end
-
-    release
   end
 
   # Run "mix help deps" to learn about dependencies.
