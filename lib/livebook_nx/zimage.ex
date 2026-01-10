@@ -207,47 +207,156 @@ from PIL import Image
 import torch
 from diffusers import DiffusionPipeline
 
-# Suppress verbose logging
 logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 logging.getLogger("transformers").setLevel(logging.ERROR)
 logging.getLogger("diffusers").setLevel(logging.ERROR)
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 
-# Disable tqdm progress bars
-try:
-    from tqdm import tqdm
-    original_init = tqdm.__init__
-    def silent_init(self, *args, **kwargs):
-        kwargs['disable'] = True
-        return original_init(self, *args, **kwargs)
-    tqdm.__init__ = silent_init
-except ImportError:
-    pass
+from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore")
 
-# Performance optimizations
-cpu_count = os.cpu_count() or 1
-half_cpu_count = max(1, cpu_count // 2)
+_original_tqdm_init = tqdm.__init__
+def _silent_tqdm_init(self, *args, **kwargs):
+    kwargs['disable'] = True
+    return _original_tqdm_init(self, *args, **kwargs)
+tqdm.__init__ = _silent_tqdm_init
+
+cpu_count = os.cpu_count()
+half_cpu_count = cpu_count // 2
 os.environ["MKL_NUM_THREADS"] = str(half_cpu_count)
 os.environ["OMP_NUM_THREADS"] = str(half_cpu_count)
 torch.set_num_threads(half_cpu_count)
 
-if torch.cuda.is_available():
-    torch.set_float32_matmul_precision("high")
-    device = "cuda"
-    dtype = torch.bfloat16
-else:
-    device = "cpu"
-    dtype = torch.float32
-
 MODEL_ID = "#{@model_id}"
-weights_dir = "#{@weights_dir}"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+dtype = torch.bfloat16 if device == "cuda" else torch.float32
 
-# Load pipeline
-if os.path.exists(weights_dir) and os.path.exists(os.path.join(weights_dir, "config.json")):
-    print(f"Loading from local directory: {weights_dir}")
+# Performance optimizations (from Exa best practices)
+if device == "cuda":
+    torch.set_float32_matmul_precision("high")
+    # Torch inductor optimizations for maximum speed
+    torch._inductor.config.conv_1x1_as_mm = True
+    torch._inductor.config.coordinate_descent_tuning = True
+    torch._inductor.config.epilogue_fusion = False
+    torch._inductor.config.coordinate_descent_check_all_directions = True
+
+zimage_weights_dir = Path(r"#{@weights_dir}").resolve()
+
+if zimage_weights_dir.exists() and (zimage_weights_dir / "config.json").exists():
+    print(f"Loading from local directory: {zimage_weights_dir}")
     pipe = DiffusionPipeline.from_pretrained(
-        weights_dir,
+        str(zimage_weights_dir),
+        torch_dtype=dtype,
+        local_files_only=False
+    )
+else:
+    print(f"Loading from Hugging Face Hub: {MODEL_ID}")
+    pipe = DiffusionPipeline.from_pretrained(
+        MODEL_ID,
+        torch_dtype=dtype
+    )
+
+pipe = pipe.to(device)
+
+# Performance optimizations for 2x speed (from Exa)
+if device == "cuda":
+    # Memory format optimization
+    try:
+        pipe.transformer.to(memory_format=torch.channels_last)
+        if hasattr(pipe, 'vae') and hasattr(pipe.vae, 'decode'):
+            pipe.vae.to(memory_format=torch.channels_last)
+        print("[OK] Memory format optimized (channels_last)")
+    except Exception as e:
+        print(f"[INFO] Memory format optimization: {e}")
+
+    # torch.compile for maximum speed (from Exa best practices)
+    # Note: Requires Triton package. Falls back gracefully if not available.
+    try:
+        # Check if Triton is available before compiling
+        import triton
+        pipe.transformer = torch.compile(pipe.transformer, mode="reduce-overhead", fullgraph=False)
+        if hasattr(pipe, 'vae') and hasattr(pipe.vae, 'decode'):
+            pipe.vae.decode = torch.compile(pipe.vae.decode, mode="reduce-overhead", fullgraph=False)
+        print("[OK] torch.compile enabled (reduce-overhead mode for 2x speed boost)")
+    except ImportError:
+        print("[INFO] Triton not installed - skipping torch.compile (install triton for 2x speed boost)")
+    except Exception as e:
+        # Catch TritonMissing and other compilation errors
+        if "Triton" in str(e) or "triton" in str(e).lower():
+            print("[INFO] Triton not available - skipping torch.compile (install triton for 2x speed boost)")
+        else:
+            print(f"[INFO] torch.compile not available: {e}")
+
+print(f"[OK] Pipeline loaded on {device} with dtype {dtype}")
+
+# Process generation
+import time
+
+prompt = "#{String.replace(config.prompt, "\"", "\\\"")}"
+width = #{config.width}
+height = #{config.height}
+seed = #{config.seed}
+num_steps = #{config.num_steps}
+guidance_scale = #{config.guidance_scale}
+output_format = "#{config.output_format}"
+
+output_dir = Path("output")
+output_dir.mkdir(exist_ok=True)
+
+generator = torch.Generator(device=device)
+if seed == 0:
+    seed = generator.seed()
+else:
+    generator.manual_seed(seed)
+
+# Generate image
+print(f"[INFO] Starting generation: {prompt[:50]}...")
+print(f"[INFO] Parameters: {width}x{height}, {num_steps} steps, seed={seed}")
+print("[INFO] Generating (optimized for speed)...")
+import sys
+sys.stdout.flush()
+
+# Use inference_mode for faster execution (2x speed)
+with torch.inference_mode():
+    output = pipe(
+        prompt=prompt,
+        width=width,
+        height=height,
+        num_inference_steps=num_steps,
+        guidance_scale=guidance_scale,
+        generator=generator,
+    )
+
+print("[INFO] Generation complete, processing image...")
+sys.stdout.flush()
+
+image = output.images[0]
+
+output_path = Path("#{String.replace(output_path, "\\", "/")}")
+
+if output_format.lower() in ["jpg", "jpeg"]:
+    if image.mode == "RGBA":
+        background = Image.new("RGB", image.size, (255, 255, 255))
+        background.paste(image, mask=image.split()[3] if image.mode == "RGBA" else None)
+        image = background
+    image.save(str(output_path), "JPEG", quality=95)
+else:
+    image.save(str(output_path), "PNG")
+
+print(f"[OK] Saved image to {output_path}")
+print(f"OUTPUT_PATH:{output_path}")
+"""
+
+    try do
+      Pythonx.eval(python_code)
+      :ok
+    rescue
+      e in Pythonx.Error ->
+        {:error, "Python execution failed: #{inspect(e)}"}
+    end
+  end
         torch_dtype=dtype,
         trust_remote_code=True
     )
