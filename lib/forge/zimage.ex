@@ -1,10 +1,24 @@
 defmodule Forge.ZImage do
   @moduledoc """
-  Z-Image-Turbo image generation module.
+  Z-Image-Turbo Diffusion Model Integration.
 
-  This module provides high-performance image generation using the Z-Image-Turbo model
-  from Tongyi-MAI. It supports photorealistic image generation from text prompts with
-  configurable parameters for quality, size, and style control.
+  Provides a Bumblebee-style API for Z-Image-Turbo image generation
+  using Pythonx for model execution.
+
+  ## Example
+
+      # Load model
+      {:ok, model} = Forge.ZImage.load_model()
+
+      # Generate image
+      {:ok, images} = Forge.ZImage.generation(
+        model,
+        %{
+          prompt: "a beautiful sunset over mountains",
+          width: 1024,
+          height: 1024
+        }
+      )
   """
 
   require Logger
@@ -12,57 +26,109 @@ defmodule Forge.ZImage do
   @model_id "Tongyi-MAI/Z-Image-Turbo"
   @weights_dir "priv/pretrained_weights/Z-Image-Turbo"
 
-  @doc """
-  Configuration struct for image generation.
-  """
-  defstruct [
-    :prompt,
-    :width,
-    :height,
-    :seed,
-    :num_steps,
-    :guidance_scale,
-    :output_format
-  ]
+  defstruct [:model_id, :weights_dir, :loaded?, :backend_opts]
 
-  @type t :: %__MODULE__{
-    prompt: String.t(),
-    width: pos_integer(),
-    height: pos_integer(),
-    seed: non_neg_integer(),
-    num_steps: pos_integer(),
-    guidance_scale: float(),
-    output_format: String.t()
-  }
+  @doc """
+  Loads a pretrained model.
+
+  Similar to Bumblebee's `Repo.pretrained()` pattern but uses Pythonx.
+
+  ## Options
+  - `:cache_dir` - Directory for model weights (default: priv/pretrained_weights/${model_id})
+  - `:backend` - Backend configuration for performance optimization
+  """
+  @spec load_model(keyword()) :: {:ok, %__MODULE__{}} | {:error, term()}
+  def load_model(opts \\ []) do
+    cache_dir = Keyword.get(opts, :cache_dir, @weights_dir)
+
+    # Ensure model directory structure
+    model_dir = Path.join(cache_dir, @model_id)
+    File.mkdir_p!(cache_dir)
+
+    struct = %__MODULE__{
+      model_id: @model_id,
+      weights_dir: model_dir,
+      loaded?: false,
+      backend_opts: Keyword.get(opts, :backend, default_backend_opts())
+    }
+
+    # Check if model is already downloaded
+    loaded? = File.exists?(model_dir) && File.exists?(Path.join(model_dir, "config.json"))
+
+    {:ok, %{struct | loaded?: loaded?}}
+  end
+
+  @doc """
+  Runs image generation on the model.
+
+  Follows Bumblebee's `serving.run()` pattern with parameters configuration.
+
+  ## Parameters
+  - `:prompt` - Text description of the image (required)
+  - `:width` - Image width in pixels (64-2048, default: 1024)
+  - `:height` - Image height in pixels (64-2048, default: 1024)
+  - `:seed` - Random seed (0 for random, default: 0)
+  - `:num_steps` - Number of inference steps (default: 4)
+  - `:guidance_scale` - Guidance scale (default: 0.0)
+  - `:output_format` - Output format: "png", "jpg", "jpeg" (default: "png")
+  """
+  @spec generation(%__MODULE__{}, map()) :: {:ok, [Path.t()]} | {:error, term()}
+  def generation(%__MODULE__{} = model, params) do
+    # Add singular generation function
+    case generation_batch(model, [params]) do
+      {:ok, [image_path]} -> {:ok, image_path}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Runs batch image generation on the model.
+
+  Generates multiple images based on prompt parameters.
+
+  ## Parameters
+  See `generation/2` for individual parameter definitions.
+  - `batch` - List of parameter maps for batch generation
+  """
+  @spec generation_batch(%__MODULE__{}, [map()]) :: {:ok, [Path.t()]} | {:error, term()}
+  def generation_batch(%__MODULE__{} = model, batch) when is_list(batch) do
+    # Validate all parameters in batch
+    with {:ok, validated_batch} <- validate_generation_params(batch),
+         {:ok, configs} <- build_generation_configs(validated_batch) do
+
+      # Use first config for model loading check
+      if !model.loaded? do
+        download_model()
+      end
+
+      # Process batch generation
+      results = configs |> Enum.map(&do_generation/1) |> Enum.reverse()
+
+      # Check if all succeeded
+      successful = Enum.filter(results, fn
+        {:ok, _} -> true
+        _ -> false
+      end)
+
+      if length(successful) == length(configs) do
+        {:ok, Enum.map(results, fn {:ok, path} -> path end)}
+      else
+        {:error, "Batch generation failed: #{length(successful)}/#{length(configs)} succeeded"}
+      end
+    end
+  end
 
   @doc """
   Generates an image from a text prompt.
 
-  ## Parameters
-
-    - `prompt`: Text description of the image to generate
-    - `opts`: Keyword list of options
-
-  ## Options
-
-    - `:width` - Image width in pixels (64-2048, default: 1024)
-    - `:height` - Image height in pixels (64-2048, default: 1024)
-    - `:seed` - Random seed (0 for random, default: 0)
-    - `:num_steps` - Number of inference steps (default: 4)
-    - `:guidance_scale` - Guidance scale (default: 0.0)
-    - `:output_format` - Output format: "png", "jpg", "jpeg" (default: "png")
-
-  ## Examples
-
-      iex> LivebookNx.ZImage.generate("a beautiful sunset over mountains")
-      {:ok, "output/20260109_21_39_19/zimage_20260109_21_39_19.png"}
-
-      iex> LivebookNx.ZImage.generate("a cat wearing a hat", width: 512, height: 512, seed: 42)
-      {:ok, "output/20260109_21_39_19/zimage_20260109_21_39_19.png"}
+  Simple alias for generation/2, maintains backward compatibility.
   """
   @spec generate(String.t(), keyword()) :: {:ok, Path.t()} | {:error, term()}
   def generate(prompt, opts \\ []) do
-    config = %__MODULE__{
+    # Load model
+    {:ok, model} = load_model()
+
+    params = %{
       prompt: prompt,
       width: Keyword.get(opts, :width, 1024),
       height: Keyword.get(opts, :height, 1024),
@@ -72,12 +138,7 @@ defmodule Forge.ZImage do
       output_format: Keyword.get(opts, :output_format, "png")
     }
 
-    case validate_config(config) do
-      :ok ->
-        do_generate(config)
-      {:error, reason} ->
-        {:error, reason}
-    end
+    generation(model, params)
   end
 
   @doc """
@@ -116,12 +177,9 @@ defmodule Forge.ZImage do
   """
   @spec run(t()) :: {:ok, Path.t()} | {:error, term()}
   def run(%__MODULE__{} = config) do
-    case validate_config(config) do
-      :ok ->
-        do_generate(config)
-      {:error, reason} ->
-        {:error, reason}
-    end
+    # Legacy function - this will only work if the struct has the right fields
+    # For new code, use the new API: load_model() + generation()
+    {:error, "Legacy struct-based run not supported. Use load_model() + generation() instead."}
   end
 
   @doc """
@@ -154,25 +212,100 @@ defmodule Forge.ZImage do
     end
   end
 
-  # Private functions
-
-  defp validate_config(%__MODULE__{} = config) do
-    validations = [
-      {String.trim(config.prompt) == "", "Prompt cannot be empty"},
-      {config.width < 64 or config.width > 2048, "Width must be between 64 and 2048 pixels"},
-      {config.height < 64 or config.height > 2048, "Height must be between 64 and 2048 pixels"},
-      {config.num_steps < 1, "Number of steps must be at least 1"},
-      {config.guidance_scale < 0.0, "Guidance scale must be non-negative"},
-      {config.output_format not in ["png", "jpg", "jpeg"], "Output format must be png, jpg, or jpeg"}
+  # Bumblebee-style API helpers
+  defp default_backend_opts do
+    [
+      seed: :erlang.system_time(:second),
+      compiler: :none,  # We use Pythonx, not Nx
+      client: :none
     ]
+  end
 
-    case Enum.find(validations, fn {condition, _} -> condition end) do
-      {true, message} -> {:error, message}
-      nil -> :ok
+  defp validate_generation_params(batch) when is_list(batch) do
+    Enum.reduce_while(batch, {:ok, []}, fn params, {:ok, acc} ->
+      case do_validate_generation_params(params) do
+        :ok -> {:cont, {:ok, [params | acc]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp do_validate_generation_params(params) do
+    cond do
+      !params[:prompt] || String.trim(params[:prompt]) == "" ->
+        {:error, "prompt is required and cannot be empty"}
+      params[:width] && (params[:width] < 64 or params[:width] > 2048) ->
+        {:error, "width must be between 64 and 2048 pixels"}
+      params[:height] && (params[:height] < 64 or params[:height] > 2048) ->
+        {:error, "height must be between 64 and 2048 pixels"}
+      params[:num_steps] && params[:num_steps] < 1 ->
+        {:error, "num_steps must be at least 1"}
+      params[:guidance_scale] && params[:guidance_scale] < 0.0 ->
+        {:error, "guidance_scale must be non-negative"}
+      params[:output_format] && params[:output_format] not in ["png", "jpg", "jpeg"] ->
+        {:error, "output_format must be png, jpg, or jpeg"}
+      true ->
+        :ok
     end
   end
 
-  defp do_generate(%__MODULE__{} = config) do
+  defp build_generation_configs(validated_batch) do
+    configs = Enum.map(validated_batch, fn params ->
+      %{
+        prompt: params[:prompt],
+        width: params[:width] || 1024,
+        height: params[:height] || 1024,
+        seed: params[:seed] || 0,
+        num_steps: params[:num_steps] || 4,
+        guidance_scale: params[:guidance_scale] || 0.0,
+        output_format: params[:output_format] || "png"
+      }
+    end)
+
+    {:ok, configs}
+  end
+
+  # Model struct type for loaded models
+  @type t :: %__MODULE__{
+    model_id: String.t(),
+    weights_dir: String.t(),
+    loaded?: boolean(),
+    backend_opts: keyword()
+  }
+
+  # Private functions
+
+  # Legacy validation - kept for compatibility
+  defp validate_config(config) do
+    cond do
+      String.trim(config.prompt) == "" ->
+        {:error, "Prompt cannot be empty"}
+      config.width < 64 or config.width > 2048 ->
+        {:error, "Width must be between 64 and 2048 pixels"}
+      config.height < 64 or config.height > 2048 ->
+        {:error, "Height must be between 64 and 2048 pixels"}
+      config.num_steps < 1 ->
+        {:error, "Number of steps must be at least 1"}
+      config.guidance_scale < 0.0 ->
+        {:error, "Guidance scale must be non-negative"}
+      config.output_format not in ["png", "jpg", "jpeg"] ->
+        {:error, "Output format must be png, jpg, or jpeg"}
+      true ->
+        :ok
+    end
+  end
+
+  # Downloads model if needed
+  def download_model do
+    # Use shared downloader
+    case HuggingFaceDownloader.download_repo(@model_id, @weights_dir, "Z-Image-Turbo", false) do
+      {:ok, _} -> :ok
+      {:error, _} -> Logger.warning("Model download had errors, continuing...")
+    end
+  end
+
+  # Processes individual generation config (used by generation/2 pipeline)
+  defp do_generation(config) when is_map(config) do
     # Validate and sanitize inputs for security
     with {:ok, safe_prompt} <- {:ok, Forge.Security.sanitize_prompt(config.prompt)},
          {:ok, output_path} <- create_secure_output_path(config.output_format) do
@@ -205,6 +338,8 @@ defmodule Forge.ZImage do
       {:error, reason} -> {:error, reason}
     end
   end
+
+
 
   defp run_python_generation(config, output_path) do
     python_code = """
