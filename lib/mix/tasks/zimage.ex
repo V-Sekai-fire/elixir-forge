@@ -87,27 +87,24 @@ defmodule Mix.Tasks.Zimage do
   end
 
   defp validate_args(prompts, opts) do
-    cond do
-      prompts == [] ->
-        {:error, "At least one text prompt is required"}
+    width = Keyword.get(opts, :width, 1024)
+    height = Keyword.get(opts, :height, 1024)
+    steps = Keyword.get(opts, :steps, 4)
+    guidance_scale = Keyword.get(opts, :guidance_scale, 0.0)
+    format = Keyword.get(opts, :format, "png")
 
-      Keyword.get(opts, :width, 1024) < 64 or Keyword.get(opts, :width, 1024) > 2048 ->
-        {:error, "Width must be between 64 and 2048 pixels"}
+    validations = [
+      {prompts == [], "At least one text prompt is required"},
+      {width < 64 or width > 2048, "Width must be between 64 and 2048 pixels"},
+      {height < 64 or height > 2048, "Height must be between 64 and 2048 pixels"},
+      {steps < 1, "Number of steps must be at least 1"},
+      {guidance_scale < 0.0, "Guidance scale must be non-negative"},
+      {format not in ["png", "jpg", "jpeg"], "Output format must be png, jpg, or jpeg"}
+    ]
 
-      Keyword.get(opts, :height, 1024) < 64 or Keyword.get(opts, :height, 1024) > 2048 ->
-        {:error, "Height must be between 64 and 2048 pixels"}
-
-      Keyword.get(opts, :steps, 4) < 1 ->
-        {:error, "Number of steps must be at least 1"}
-
-      Keyword.get(opts, :guidance_scale, 0.0) < 0.0 ->
-        {:error, "Guidance scale must be non-negative"}
-
-      Keyword.get(opts, :format, "png") not in ["png", "jpg", "jpeg"] ->
-        {:error, "Output format must be png, jpg, or jpeg"}
-
-      true ->
-        :ok
+    case Enum.find(validations, fn {condition, _} -> condition end) do
+      {true, message} -> {:error, message}
+      nil -> :ok
     end
   end
 
@@ -152,39 +149,46 @@ defmodule Mix.Tasks.Zimage do
     Mix.shell().info("")
 
     if failed_count == 0 do
-      Mix.shell().info("=== ALL SUCCESSFUL (#{success_count}/#{prompt_count}) ===")
-      Mix.shell().info("All #{success_count} image(s) generated successfully!")
-
-      results
-      |> Enum.filter(fn {:ok, path} -> path end)
-      |> Enum.each(fn {:ok, path} -> Mix.shell().info("  • #{path}") end)
+      print_all_successful(results, success_count, prompt_count)
     else
-      Mix.shell().info("=== PARTIAL SUCCESS (#{success_count}/#{prompt_count} succeeded) ===")
-
-      if success_count > 0 do
-        Mix.shell().info("Successful generations:")
-        results
-        |> Enum.with_index(1)
-        |> Enum.filter(fn
-          {{:ok, _}, _} -> true
-          _ -> false
-        end)
-        |> Enum.each(fn {{:ok, path}, idx} -> Mix.shell().info("  [#{idx}] #{path}") end)
-        Mix.shell().info("")
-      end
-
-      if failed_count > 0 do
-        Mix.shell().error("Failed generations:")
-        results
-        |> Enum.with_index(1)
-        |> Enum.filter(fn
-          {{:error, _}, _} -> true
-          _ -> false
-        end)
-        |> Enum.each(fn {{:error, reason}, idx} -> Mix.shell().error("  [#{idx}] #{inspect(reason)}") end)
-      end
-
+      print_partial_success(results, success_count, prompt_count, failed_count)
       exit({:shutdown, 1})
+    end
+  end
+
+  defp print_all_successful(results, success_count, prompt_count) do
+    Mix.shell().info("=== ALL SUCCESSFUL (#{success_count}/#{prompt_count}) ===")
+    Mix.shell().info("All #{success_count} image(s) generated successfully!")
+
+    results
+    |> Enum.filter(fn {:ok, path} -> path end)
+    |> Enum.each(fn {:ok, path} -> Mix.shell().info("  • #{path}") end)
+  end
+
+  defp print_partial_success(results, success_count, prompt_count, failed_count) do
+    Mix.shell().info("=== PARTIAL SUCCESS (#{success_count}/#{prompt_count} succeeded) ===")
+
+    if success_count > 0 do
+      Mix.shell().info("Successful generations:")
+      results
+      |> Enum.with_index(1)
+      |> Enum.filter(fn
+        {{:ok, _}, _} -> true
+        _ -> false
+      end)
+      |> Enum.each(fn {{:ok, path}, idx} -> Mix.shell().info("  [#{idx}] #{path}") end)
+      Mix.shell().info("")
+    end
+
+    if failed_count > 0 do
+      Mix.shell().error("Failed generations:")
+      results
+      |> Enum.with_index(1)
+      |> Enum.filter(fn
+        {{:error, _}, _} -> true
+        _ -> false
+      end)
+      |> Enum.each(fn {{:error, reason}, idx} -> Mix.shell().error("  [#{idx}] #{inspect(reason)}") end)
     end
   end
 

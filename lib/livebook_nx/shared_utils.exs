@@ -101,93 +101,144 @@ defmodule HuggingFaceDownloader do
   end
 
   defp get_files_recursive(repo_id, revision, path) do
-    url = if path == "" do
-      "#{@api_base}/models/#{repo_id}/tree/#{revision}"
-    else
-      "#{@api_base}/models/#{repo_id}/tree/#{revision}/#{path}"
-    end
+    url = build_api_url(repo_id, revision, path)
 
     try do
       response = Req.get(url)
-      items = case response do
-        {:ok, %{status: 200, body: body}} when is_list(body) -> body
-        %{status: 200, body: body} when is_list(body) -> body
-        {:ok, %{status: status}} -> raise "API returned status #{status}"
-        %{status: status} -> raise "API returned status #{status}"
-        {:error, reason} -> raise inspect(reason)
-        other -> raise "Unexpected response: #{inspect(other)}"
-      end
-
+      items = parse_api_response(response)
       files = Enum.filter(items, &(&1["type"] == "file"))
       dirs = Enum.filter(items, &(&1["type"] == "directory"))
 
-      subdir_files =
-        dirs
-        |> Enum.flat_map(fn dir ->
-          case get_files_recursive(repo_id, revision, dir["path"]) do
-            {:ok, subfiles} -> subfiles
-            _ -> []
-          end
-        end)
-
+      subdir_files = get_subdirectory_files(repo_id, revision, dirs)
       {:ok, files ++ subdir_files}
     rescue
       e -> {:error, Exception.message(e)}
     end
   end
 
+  # Build the API URL for the given path
+  defp build_api_url(repo_id, revision, path) do
+    if path == "" do
+      "#{@api_base}/models/#{repo_id}/tree/#{revision}"
+    else
+      "#{@api_base}/models/#{repo_id}/tree/#{revision}/#{path}"
+    end
+  end
+
+  # Parse the API response and extract items
+  defp parse_api_response(response) do
+    case response do
+      {:ok, %{status: 200, body: body}} when is_list(body) -> body
+      %{status: 200, body: body} when is_list(body) -> body
+      {:ok, %{status: status}} -> raise "API returned status #{status}"
+      %{status: status} -> raise "API returned status #{status}"
+      {:error, reason} -> raise inspect(reason)
+      other -> raise "Unexpected response: #{inspect(other)}"
+    end
+  end
+
+  # Get files from all subdirectories recursively
+  defp get_subdirectory_files(repo_id, revision, dirs) do
+    dirs
+    |> Enum.flat_map(fn dir ->
+      case get_files_recursive(repo_id, revision, dir["path"]) do
+        {:ok, subfiles} -> subfiles
+        _ -> []
+      end
+    end)
+  end
+
   defp download_file(repo_id, path, local_dir, info, current, total, use_otel) do
     url = "#{@base_url}/#{repo_id}/resolve/main/#{path}"
     local_path = Path.join(local_dir, path)
-    file_size = info["size"] || 0
-    size_mb = if file_size > 0, do: Float.round(file_size / 1024 / 1024, 1), else: 0
     filename = Path.basename(path)
-    IO.write("\r  [#{current}/#{total}] Downloading: #{filename} (#{size_mb} MB)")
+
+    display_download_progress(filename, info["size"] || 0, current, total)
 
     if File.exists?(local_path) do
-      IO.write("\r  [#{current}/#{total}] Skipped (exists): #{filename}")
+      display_skip_message(filename, current, total)
     else
-      local_path
-      |> Path.dirname()
-      |> File.mkdir_p!()
+      download_and_handle_result(url, local_path, path, filename, current, total, use_otel)
+    end
+  end
 
-      result = Req.get(url,
-        into: File.stream!(local_path, [], 65_536),
-        retry: :transient,
-        max_redirects: 10
-      )
+  # Display download progress information
+  defp display_download_progress(filename, file_size, current, total) do
+    size_mb = if file_size > 0, do: Float.round(file_size / 1024 / 1024, 1), else: 0
+    IO.write("\r  [#{current}/#{total}] Downloading: #{filename} (#{size_mb} MB)")
+  end
 
-      case result do
-        {:ok, %{status: 200}} -> IO.write("\r  [#{current}/#{total}] ✓ #{filename}")
-        %{status: 200} -> IO.write("\r  [#{current}/#{total}] ✓ #{filename}")
-        {:ok, %{status: status}} ->
-          if use_otel do
-            OtelLogger.warn("Failed to download file", [
-              {"download.file_path", path},
-              {"download.status_code", status}
-            ])
-          else
-            IO.puts("\n[WARN] Failed to download file: #{path} (status: #{status})")
-          end
-        %{status: status} ->
-          if use_otel do
-            OtelLogger.warn("Failed to download file", [
-              {"download.file_path", path},
-              {"download.status_code", status}
-            ])
-          else
-            IO.puts("\n[WARN] Failed to download file: #{path} (status: #{status})")
-          end
-        {:error, reason} ->
-          if use_otel do
-            OtelLogger.warn("Failed to download file", [
-              {"download.file_path", path},
-              {"error.reason", inspect(reason)}
-            ])
-          else
-            IO.puts("\n[WARN] Failed to download file: #{path} (#{inspect(reason)})")
-          end
-      end
+  # Display skip message for existing files
+  defp display_skip_message(filename, current, total) do
+    IO.write("\r  [#{current}/#{total}] Skipped (exists): #{filename}")
+  end
+
+  # Download file and handle the result
+  defp download_and_handle_result(url, local_path, path, filename, current, total, use_otel) do
+    # Ensure directory exists
+    local_path
+    |> Path.dirname()
+    |> File.mkdir_p!()
+
+    # Perform download
+    result = Req.get(url,
+      into: File.stream!(local_path, [], 65_536),
+      retry: :transient,
+      max_redirects: 10
+    )
+
+    # Handle download result
+    handle_download_result(result, path, filename, current, total, use_otel)
+  end
+
+  # Handle the result of the download request
+  defp handle_download_result(result, path, filename, current, total, use_otel) do
+    case result do
+      {:ok, %{status: 200}} ->
+        IO.write("\r  [#{current}/#{total}] ✓ #{filename}")
+      %{status: 200} ->
+        IO.write("\r  [#{current}/#{total}] ✓ #{filename}")
+      {:ok, %{status: status}} ->
+        handle_download_error(status, path, use_otel)
+      %{status: status} ->
+        handle_download_error(status, path, use_otel)
+      {:error, reason} ->
+        handle_download_error(reason, path, use_otel)
+    end
+  end
+
+  # Handle download errors with appropriate logging
+  defp handle_download_error(error_info, path, use_otel) do
+    if use_otel do
+      log_download_error_otel(error_info, path)
+    else
+      log_download_error_console(error_info, path)
+    end
+  end
+
+  # Log download errors using OpenTelemetry
+  defp log_download_error_otel(error_info, path) do
+    case error_info do
+      status when is_integer(status) ->
+        OtelLogger.warn("Failed to download file", [
+          {"download.file_path", path},
+          {"download.status_code", status}
+        ])
+      reason ->
+        OtelLogger.warn("Failed to download file", [
+          {"download.file_path", path},
+          {"error.reason", inspect(reason)}
+        ])
+    end
+  end
+
+  # Log download errors to console
+  defp log_download_error_console(error_info, path) do
+    case error_info do
+      status when is_integer(status) ->
+        IO.puts("\n[WARN] Failed to download file: #{path} (status: #{status})")
+      reason ->
+        IO.puts("\n[WARN] Failed to download file: #{path} (#{inspect(reason)})")
     end
   end
 end
@@ -815,75 +866,103 @@ defmodule SpanCollector do
         result
       rescue
         e ->
-          # Handle SystemExit(0) as success, not error
-          case e do
-            %Pythonx.Error{type: type, value: value} ->
-              try do
-                # Use Pythonx.eval to access Python object attributes
-                # Create a temporary Python namespace with the objects
-                python_globals = %{"_elixir_type" => type, "_elixir_value" => value}
-                {type_name, _} = Pythonx.eval("_elixir_type.__name__", python_globals)
-                if type_name == "SystemExit" do
-                  exit_code = try do
-                    {code, _} = Pythonx.eval("_elixir_value.__int__()", python_globals)
-                    code
-                  rescue
-                    _ ->
-                      # Try to get exit code from args
-                      try do
-                        {args, _} = Pythonx.eval("_elixir_value.args", python_globals)
-                        case args do
-                          [code] when is_integer(code) -> code
-                          _ -> 0
-                        end
-                      rescue
-                        _ -> 0
-                      end
-                  end
-
-                  if exit_code == 0 do
-                    # SystemExit(0) is success, not an error
-                    OpenTelemetry.Tracer.set_status(:ok)
-                    :ok
-                  else
-                    # Non-zero exit code is an error
-                    OpenTelemetry.Tracer.record_exception(e, [])
-                    OpenTelemetry.Tracer.set_status(:error, "SystemExit(#{exit_code})")
-                    reraise e, __STACKTRACE__
-                  end
-                else
-                  # Other Python exceptions are errors
-                  OpenTelemetry.Tracer.record_exception(e, [])
-                  try do
-                    OpenTelemetry.Tracer.set_status(:error, Exception.message(e))
-                  rescue
-                    _ -> OpenTelemetry.Tracer.set_status(:error, "Python exception: #{inspect(type_name)}")
-                  end
-                  reraise e, __STACKTRACE__
-                end
-              rescue
-                _ ->
-                  # If we can't determine the exception type, treat as error
-                  OpenTelemetry.Tracer.record_exception(e, [])
-                  try do
-                    OpenTelemetry.Tracer.set_status(:error, Exception.message(e))
-                  rescue
-                    _ -> OpenTelemetry.Tracer.set_status(:error, "Python exception")
-                  end
-                  reraise e, __STACKTRACE__
-              end
-            _ ->
-              # Non-Pythonx exceptions
-              OpenTelemetry.Tracer.record_exception(e, [])
-              try do
-                OpenTelemetry.Tracer.set_status(:error, Exception.message(e))
-              rescue
-                _ -> OpenTelemetry.Tracer.set_status(:error, inspect(e))
-              end
-              reraise e, __STACKTRACE__
-          end
+          handle_span_exception(e)
       end
     end
+  end
+
+  # Extracted helper function to handle different exception types
+  defp handle_span_exception(e) do
+    case e do
+      %Pythonx.Error{type: type, value: value} ->
+        handle_python_exception(type, value, e)
+      _ ->
+        handle_elixir_exception(e)
+    end
+  end
+
+  # Handle Python-specific exceptions
+  defp handle_python_exception(type, value, original_exception) do
+    try do
+      python_globals = %{"_elixir_type" => type, "_elixir_value" => value}
+      {type_name, _} = Pythonx.eval("_elixir_type.__name__", python_globals)
+
+      if type_name == "SystemExit" do
+        handle_system_exit(value, python_globals, original_exception)
+      else
+        handle_other_python_exception(original_exception, type_name)
+      end
+    rescue
+      _ ->
+        handle_unknown_python_exception(original_exception)
+    end
+  end
+
+  # Handle SystemExit exceptions from Python
+  defp handle_system_exit(value, python_globals, original_exception) do
+    exit_code = extract_exit_code(value, python_globals)
+
+    if exit_code == 0 do
+      OpenTelemetry.Tracer.set_status(:ok)
+      :ok
+    else
+      OpenTelemetry.Tracer.record_exception(original_exception, [])
+      OpenTelemetry.Tracer.set_status(:error, "SystemExit(#{exit_code})")
+      reraise original_exception, __STACKTRACE__
+    end
+  end
+
+  # Extract exit code from SystemExit exception
+  defp extract_exit_code(value, python_globals) do
+    try do
+      {code, _} = Pythonx.eval("_elixir_value.__int__()", python_globals)
+      code
+    rescue
+      _ ->
+        # Try to get exit code from args
+        try do
+          {args, _} = Pythonx.eval("_elixir_value.args", python_globals)
+          case args do
+            [code] when is_integer(code) -> code
+            _ -> 0
+          end
+        rescue
+          _ -> 0
+        end
+    end
+  end
+
+  # Handle other Python exceptions
+  defp handle_other_python_exception(original_exception, type_name) do
+    OpenTelemetry.Tracer.record_exception(original_exception, [])
+    try do
+      OpenTelemetry.Tracer.set_status(:error, Exception.message(original_exception))
+    rescue
+      _ -> OpenTelemetry.Tracer.set_status(:error, "Python exception: #{inspect(type_name)}")
+    end
+    reraise original_exception, __STACKTRACE__
+  end
+
+  # Handle unknown Python exceptions
+  defp handle_unknown_python_exception(original_exception) do
+    OpenTelemetry.Tracer.record_exception(original_exception, [])
+    try do
+      OpenTelemetry.Tracer.set_status(:error, Exception.message(original_exception))
+    rescue
+      _ -> OpenTelemetry.Tracer.set_status(:error, "Python exception")
+    end
+    reraise original_exception, __STACKTRACE__
+  end
+
+  # Handle regular Elixir exceptions
+  defp handle_elixir_exception(original_exception) do
+    OpenTelemetry.Tracer.record_exception(original_exception, [])
+    try do
+      OpenTelemetry.Tracer.set_status(:error, Exception.message(original_exception))
+    rescue
+      _ -> OpenTelemetry.Tracer.set_status(:error, inspect(original_exception))
+    end
+    reraise original_exception, __STACKTRACE__
   end
 
   def add_span_attribute(key, value) do

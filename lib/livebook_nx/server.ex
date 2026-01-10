@@ -196,139 +196,178 @@ defmodule LivebookNx.Server do
   # Private Functions
 
   defp do_start_database(state) do
+    with :ok <- check_database_not_running(state),
+         :ok <- check_certificates_exist(),
+         :ok <- check_cockroach_binary_exists(),
+         {:ok, output} <- start_cockroach_process(),
+         {:ok, pid} <- find_cockroach_pid(),
+         new_state <- update_state_with_pid(state, pid),
+         :ok <- create_database() do
+      Logger.info("Database created successfully")
+      {:ok, pid, new_state}
+    else
+      {:error, reason} ->
+        Logger.error("Database startup failed", %{reason: reason})
+        {:error, reason}
+    end
+  end
+
+  # Check if database is not already running
+  defp check_database_not_running(state) do
     if state.cockroach_pid && Process.alive?(state.cockroach_pid) do
       {:error, "CockroachDB is already running"}
     else
-      # Check if certificates exist
-      cert_files = ["cockroach-certs/ca.crt", "cockroach-certs/node.crt", "cockroach-certs/node.key"]
-
-      if Enum.all?(cert_files, &File.exists?/1) do
-        # Start CockroachDB process
-        _port = state.cockroach_port
-        data_dir = "cockroach-data"
-        certs_dir = "cockroach-certs"
-        cockroach_path = "tools/cockroach-v22.1.22.windows-6.2-amd64/cockroach.exe"
-
-        if File.exists?(cockroach_path) do
-          args = [
-            "start-single-node",
-
-            "--store=path=#{data_dir}",
-            "--certs-dir=#{certs_dir}"
-          ]
-
-          case System.cmd(cockroach_path, args, stderr_to_stdout: true) do
-            {output, 0} ->
-              Logger.info("CockroachDB started", %{output: output})
-              # Wait a moment for startup
-              Process.sleep(3000)
-
-              # Find the PID of the cockroach process
-              case find_cockroach_pid() do
-                {:ok, pid} ->
-                  new_state = %{state |
-                    cockroach_pid: pid,
-                    database_started_at: DateTime.utc_now()
-                  }
-
-                  # Create the database
-                  case create_database() do
-                    :ok ->
-                      Logger.info("Database created successfully")
-                      {:ok, pid, new_state}
-
-                    {:error, reason} ->
-                      Logger.error("Database creation failed", %{reason: reason})
-                      # Stop the database if we can't create it
-                      do_stop_database(new_state)
-                      {:error, "Database creation failed: #{reason}"}
-                  end
-
-                :error ->
-                  {:error, "Could not find CockroachDB process PID"}
-              end
-
-            {error_output, exit_code} ->
-              {:error, "Failed to start CockroachDB (exit code #{exit_code}): #{error_output}"}
-          end
-        else
-          {:error, "CockroachDB binary not found at #{cockroach_path}"}
-        end
-      else
-        {:error, "TLS certificates not found. Run certificate generation first."}
-      end
+      :ok
     end
+  end
+
+  # Check if TLS certificates exist
+  defp check_certificates_exist do
+    cert_files = ["cockroach-certs/ca.crt", "cockroach-certs/node.crt", "cockroach-certs/node.key"]
+
+    if Enum.all?(cert_files, &File.exists?/1) do
+      :ok
+    else
+      {:error, "TLS certificates not found. Run certificate generation first."}
+    end
+  end
+
+  # Check if CockroachDB binary exists
+  defp check_cockroach_binary_exists do
+    cockroach_path = "tools/cockroach-v22.1.22.windows-6.2-amd64/cockroach.exe"
+
+    if File.exists?(cockroach_path) do
+      :ok
+    else
+      {:error, "CockroachDB binary not found at #{cockroach_path}"}
+    end
+  end
+
+  # Start the CockroachDB process
+  defp start_cockroach_process do
+    cockroach_path = "tools/cockroach-v22.1.22.windows-6.2-amd64/cockroach.exe"
+    data_dir = "cockroach-data"
+    certs_dir = "cockroach-certs"
+
+    args = [
+      "start-single-node",
+      "--store=path=#{data_dir}",
+      "--certs-dir=#{certs_dir}"
+    ]
+
+    case System.cmd(cockroach_path, args, stderr_to_stdout: true) do
+      {output, 0} ->
+        Logger.info("CockroachDB started", %{output: output})
+        # Wait a moment for startup
+        Process.sleep(3000)
+        {:ok, output}
+      {error_output, exit_code} ->
+        {:error, "Failed to start CockroachDB (exit code #{exit_code}): #{error_output}"}
+    end
+  end
+
+  # Update state with the new PID and start time
+  defp update_state_with_pid(state, pid) do
+    %{state |
+      cockroach_pid: pid,
+      database_started_at: DateTime.utc_now()
+    }
   end
 
   defp do_stop_database(state) do
     if state.cockroach_pid do
-      cockroach_path = "tools/cockroach-v22.1.22.windows-6.2-amd64/cockroach.exe"
-
-      # Try graceful shutdown first
-      case System.cmd(cockroach_path, ["quit", "--certs-dir=cockroach-certs"], []) do
-        {_output, 0} ->
-          # Wait for process to exit
-          Process.sleep(2000)
-
-          if Process.alive?(state.cockroach_pid) do
-            # Force kill if still running
-            System.cmd("taskkill", ["/PID", "#{state.cockroach_pid}", "/F"], [])
-            Process.sleep(1000)
-          end
-
-          new_state = %{state |
-            cockroach_pid: nil,
-            database_started_at: nil
-          }
-          {:ok, new_state}
-
-        {error_output, _exit_code} ->
-          {:error, "Failed to stop CockroachDB gracefully: #{error_output}"}
-      end
+      perform_graceful_shutdown(state)
     else
       {:error, "CockroachDB is not running"}
     end
   end
 
+  defp perform_graceful_shutdown(state) do
+    cockroach_path = "tools/cockroach-v22.1.22.windows-6.2-amd64/cockroach.exe"
+
+    # Try graceful shutdown first
+    case System.cmd(cockroach_path, ["quit", "--certs-dir=cockroach-certs"], []) do
+      {_output, 0} ->
+        # Wait for process to exit
+        Process.sleep(2000)
+
+        if Process.alive?(state.cockroach_pid) do
+          # Force kill if still running
+          System.cmd("taskkill", ["/PID", "#{state.cockroach_pid}", "/F"], [])
+          Process.sleep(1000)
+        end
+
+        new_state = %{state |
+          cockroach_pid: nil,
+          database_started_at: nil
+        }
+        {:ok, new_state}
+
+      {error_output, _exit_code} ->
+        {:error, "Failed to stop CockroachDB gracefully: #{error_output}"}
+    end
+  end
+
   defp find_cockroach_pid do
-    # Use tasklist to find cockroach process
+    case run_tasklist_command() do
+      {:ok, output} ->
+        parse_tasklist_output(output)
+      {:error, error, code} ->
+        Logger.error("Tasklist command failed", %{error: error, code: code})
+        :error
+    end
+  end
+
+  # Run the tasklist command to get process information
+  defp run_tasklist_command do
     case System.cmd("tasklist", ["/FI", "IMAGENAME eq cockroach.exe", "/FO", "CSV"], []) do
       {output, 0} ->
         Logger.info("Tasklist output", %{output: output})
-        # Parse CSV output to find PID
-        lines = String.split(output, "\n")
-        # Skip header line and find the data line
-        case Enum.find(lines, &String.contains?(&1, "cockroach.exe")) do
-          nil ->
-            Logger.error("No cockroach.exe found in tasklist")
-            :error
-
-          line ->
-            Logger.info("Found cockroach line", %{line: line})
-            # CSV format: "Image Name","PID","Session Name","Session#","Mem Usage"
-            # Example: "cockroach.exe","11368","Console","1","274,020 K"
-            case String.split(line, ",") do
-              [_image, pid_str | _] ->
-                # Remove quotes from PID
-                pid_clean = String.trim(pid_str, "\"")
-                Logger.info("Parsed PID string", %{pid_str: pid_clean})
-                case Integer.parse(pid_clean) do
-                  {pid, _} ->
-                    Logger.info("Successfully parsed PID", %{pid: pid})
-                    {:ok, pid}
-                  :error ->
-                    Logger.error("Failed to parse PID", %{pid_str: pid_clean})
-                    :error
-                end
-
-              _ ->
-                Logger.error("Unexpected CSV format", %{line: line})
-                :error
-            end
-        end
-
+        {:ok, output}
       {error, code} ->
-        Logger.error("Tasklist command failed", %{error: error, code: code})
+        {:error, error, code}
+    end
+  end
+
+  # Parse the tasklist CSV output to find the PID
+  defp parse_tasklist_output(output) do
+    lines = String.split(output, "\n")
+    # Skip header line and find the data line
+    case Enum.find(lines, &String.contains?(&1, "cockroach.exe")) do
+      nil ->
+        Logger.error("No cockroach.exe found in tasklist")
+        :error
+      line ->
+        parse_csv_line(line)
+    end
+  end
+
+  # Parse a single CSV line to extract the PID
+  defp parse_csv_line(line) do
+    Logger.info("Found cockroach line", %{line: line})
+    # CSV format: "Image Name","PID","Session Name","Session#","Mem Usage"
+    # Example: "cockroach.exe","11368","Console","1","274,020 K"
+    case String.split(line, ",") do
+      [_image, pid_str | _] ->
+        parse_pid_string(pid_str)
+      _ ->
+        Logger.error("Unexpected CSV format", %{line: line})
+        :error
+    end
+  end
+
+  # Parse the PID string and convert to integer
+  defp parse_pid_string(pid_str) do
+    # Remove quotes from PID
+    pid_clean = String.trim(pid_str, "\"")
+    Logger.info("Parsed PID string", %{pid_str: pid_clean})
+
+    case Integer.parse(pid_clean) do
+      {pid, _} ->
+        Logger.info("Successfully parsed PID", %{pid: pid})
+        {:ok, pid}
+      :error ->
+        Logger.error("Failed to parse PID", %{pid_str: pid_clean})
         :error
     end
   end

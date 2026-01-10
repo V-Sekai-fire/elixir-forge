@@ -143,27 +143,18 @@ defmodule LivebookNx.ZImage do
   # Private functions
 
   defp validate_config(%__MODULE__{} = config) do
-    cond do
-      String.trim(config.prompt) == "" ->
-        {:error, "Prompt cannot be empty"}
+    validations = [
+      {String.trim(config.prompt) == "", "Prompt cannot be empty"},
+      {config.width < 64 or config.width > 2048, "Width must be between 64 and 2048 pixels"},
+      {config.height < 64 or config.height > 2048, "Height must be between 64 and 2048 pixels"},
+      {config.num_steps < 1, "Number of steps must be at least 1"},
+      {config.guidance_scale < 0.0, "Guidance scale must be non-negative"},
+      {config.output_format not in ["png", "jpg", "jpeg"], "Output format must be png, jpg, or jpeg"}
+    ]
 
-      config.width < 64 or config.width > 2048 ->
-        {:error, "Width must be between 64 and 2048 pixels"}
-
-      config.height < 64 or config.height > 2048 ->
-        {:error, "Height must be between 64 and 2048 pixels"}
-
-      config.num_steps < 1 ->
-        {:error, "Number of steps must be at least 1"}
-
-      config.guidance_scale < 0.0 ->
-        {:error, "Guidance scale must be non-negative"}
-
-      config.output_format not in ["png", "jpg", "jpeg"] ->
-        {:error, "Output format must be png, jpg, or jpeg"}
-
-      true ->
-        :ok
+    case Enum.find(validations, fn {condition, _} -> condition end) do
+      {true, message} -> {:error, message}
+      nil -> :ok
     end
   end
 
