@@ -159,38 +159,36 @@ defmodule LivebookNx.ZImage do
   end
 
   defp do_generate(%__MODULE__{} = config) do
-    # Initialize Python environment if not already initialized
-    unless Process.whereis(Pythonx.Supervisor) do
-      pyproject_path = Path.join(["config", "qwen_pyproject.toml"])
-      pyproject_content = File.read!(pyproject_path)
-      Pythonx.uv_init(pyproject_content)
-    end
+    # Validate and sanitize inputs for security
+    with {:ok, safe_prompt} <- {:ok, LivebookNx.Security.sanitize_prompt(config.prompt)},
+         {:ok, output_path} <- create_secure_output_path(config.output_format) do
 
-    # Create output directory
-    timestamp = Calendar.strftime(DateTime.utc_now(), "%Y%m%d_%H_%M_%S")
-    output_dir = Path.join(["output", timestamp])
-    File.mkdir_p!(output_dir)
+      # Initialize Python environment if not already initialized
+      unless Process.whereis(Pythonx.Supervisor) do
+        pyproject_path = Path.join(["config", "qwen_pyproject.toml"])
+        pyproject_content = File.read!(pyproject_path)
+        Pythonx.uv_init(pyproject_content)
+      end
 
-    # Generate unique filename
-    filename = "zimage_#{timestamp}.#{config.output_format}"
-    output_path = Path.join(output_dir, filename)
+      Logger.info("Starting Z-Image-Turbo generation", %{
+        prompt: String.length(safe_prompt), # Don't log full prompt for privacy
+        width: config.width,
+        height: config.height,
+        seed: config.seed,
+        num_steps: config.num_steps
+      })
 
-    Logger.info("Starting Z-Image-Turbo generation", %{
-      prompt: config.prompt,
-      width: config.width,
-      height: config.height,
-      seed: config.seed,
-      num_steps: config.num_steps
-    })
+      case run_python_generation(Map.put(config, :prompt, safe_prompt), output_path) do
+        :ok ->
+          Logger.info("Z-Image-Turbo generation completed", %{output_path: output_path})
+          {:ok, output_path}
 
-    case run_python_generation(config, output_path) do
-      :ok ->
-        Logger.info("Z-Image-Turbo generation completed", %{output_path: output_path})
-        {:ok, output_path}
-
-      {:error, reason} ->
-        Logger.error("Z-Image-Turbo generation failed", %{error: reason})
-        {:error, reason}
+        {:error, reason} ->
+          Logger.error("Z-Image-Turbo generation failed", %{error: reason})
+          {:error, reason}
+      end
+    else
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -355,4 +353,26 @@ print(f"OUTPUT_PATH:{output_path}")
         {:error, "Python execution failed: #{inspect(e)}"}
     end
   end
+
+  # Creates a secure output path with validation and timestamp
+  defp create_secure_output_path(output_format) do
+    with {:ok, safe_format} <- validate_output_format(output_format) do
+      timestamp = Calendar.strftime(DateTime.utc_now(), "%Y%m%d_%H_%M_%S")
+      output_dir = Path.join(["output", timestamp])
+      File.mkdir_p!(output_dir)
+
+      filename = "zimage_#{timestamp}.#{safe_format}"
+
+      case LivebookNx.Security.validate_filename(filename) do
+        {:ok, validated_filename} ->
+          output_path = Path.join(output_dir, validated_filename)
+          {:ok, output_path}
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  end
+
+  # Validates output format for security
+  defp validate_output_format(format) when format in ["png", "jpg", "jpeg"], do: {:ok, format}
+  defp validate_output_format(_), do: {:error, "Invalid output format"}
 end

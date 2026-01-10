@@ -120,3 +120,10 @@ tools/cockroach.zip
 
 # Node modules
 node_modules
+
+# Production configuration (contains secrets)
+config/prod.exs
+
+# Environment specific config files
+config/*.local.exs
+config/*.secret.exs

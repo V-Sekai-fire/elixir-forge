@@ -10,17 +10,17 @@ config :livebook_nx, Oban,
   plugins: [Oban.Plugins.Pruner],
   queues: [default: 5, ml: 8]
 
-# Database
+# Database (development defaults - production uses environment variables)
 config :livebook_nx, LivebookNx.Repo,
-  database: "livebook_nx_dev",
-  username: "root",
-  password: "secure_password_123",
-  hostname: "localhost",
-  port: 26257,
+  database: System.get_env("DATABASE_NAME", "livebook_nx_dev"),
+  username: System.get_env("DATABASE_USER", "root"),
+  password: System.get_env("DATABASE_PASSWORD", "secure_password_123"),
+  hostname: System.get_env("DATABASE_HOST", "localhost"),
+  port: String.to_integer(System.get_env("DATABASE_PORT", "26257")),
   ssl: [
-    cacertfile: "cockroach-certs/ca.crt",
-    certfile: "cockroach-certs/client.root.crt",
-    keyfile: "cockroach-certs/client.root.key"
+    cacertfile: System.get_env("DB_CA_CERT", "cockroach-certs/ca.crt"),
+    certfile: System.get_env("DB_CLIENT_CERT", "cockroach-certs/client.root.crt"),
+    keyfile: System.get_env("DB_CLIENT_KEY", "cockroach-certs/client.root.key")
   ],
   migration_lock: nil
 
