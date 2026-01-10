@@ -21,17 +21,13 @@ defmodule Mix.Tasks.Zimage do
       mix zimage "a beautiful sunset over mountains"
       mix zimage "a cat wearing a hat" --width 512 --height 512 --seed 42
       mix zimage "futuristic cityscape" --steps 8 --format jpg
-
-  Multiple prompts can be provided to generate multiple images:
-
-      mix zimage "cat" "dog" "bird" --width 512
   """
 
   use Mix.Task
 
   @impl Mix.Task
   def run(args) do
-    # Start the application to ensure dependencies are loaded
+    # Start the application to ensure the GenServer is running
     Mix.Task.run("app.start")
 
     case parse_args(args) do
@@ -125,13 +121,16 @@ defmodule Mix.Tasks.Zimage do
     |> Enum.map(fn {prompt, index} ->
       Mix.shell().info("[#{index}/#{prompt_count}] Generating: #{prompt}")
 
-      case LivebookNx.ZImage.generate(prompt,
-             width: config.width,
-             height: config.height,
-             seed: config.seed,
-             num_steps: config.num_steps,
-             guidance_scale: config.guidance_scale,
-             output_format: config.output_format) do
+      options = [
+        width: config.width,
+        height: config.height,
+        seed: config.seed,
+        num_steps: config.num_steps,
+        guidance_scale: config.guidance_scale,
+        output_format: config.output_format
+      ]
+
+      case LivebookNx.Server.run_zimage_generation(prompt, options) do
         {:ok, output_path} ->
           Mix.shell().info("  ✓ Success: #{output_path}")
           {:ok, output_path}
@@ -166,7 +165,10 @@ defmodule Mix.Tasks.Zimage do
         Mix.shell().info("Successful generations:")
         results
         |> Enum.with_index(1)
-        |> Enum.filter(fn {{:ok, _}, _} -> true; _ -> false end)
+        |> Enum.filter(fn
+          {{:ok, _}, _} -> true
+          _ -> false
+        end)
         |> Enum.each(fn {{:ok, path}, idx} -> Mix.shell().info("  [#{idx}] #{path}") end)
         Mix.shell().info("")
       end
@@ -175,7 +177,10 @@ defmodule Mix.Tasks.Zimage do
         Mix.shell().error("Failed generations:")
         results
         |> Enum.with_index(1)
-        |> Enum.filter(fn {{:error, _}, _} -> true; _ -> false end)
+        |> Enum.filter(fn
+          {{:error, _}, _} -> true
+          _ -> false
+        end)
         |> Enum.each(fn {{:error, reason}, idx} -> Mix.shell().error("  [#{idx}] #{inspect(reason)}") end)
       end
 

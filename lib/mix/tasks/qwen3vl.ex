@@ -6,9 +6,8 @@ defmodule Mix.Tasks.Qwen3vl do
 
   @impl Mix.Task
   def run(args) do
-    # Start required applications
-    Application.ensure_all_started(:pythonx)
-    Application.ensure_all_started(:req)
+    # Start the application to ensure the GenServer is running
+    Mix.Task.run("app.start")
 
     {opts, args, _} = OptionParser.parse(args,
       switches: [
@@ -27,19 +26,30 @@ defmodule Mix.Tasks.Qwen3vl do
       ]
     )
 
-    [image_path, prompt] = args
+    case args do
+      [image_path, prompt] ->
+        options = [
+          max_tokens: opts[:max_tokens],
+          temperature: opts[:temperature],
+          top_p: opts[:top_p],
+          output_path: opts[:output],
+          use_flash_attention: opts[:use_flash_attention],
+          use_4bit: if(opts[:full_precision], do: false, else: opts[:use_4bit] || true)
+        ]
 
-    config = LivebookNx.Qwen3VL.new(
-      image_path: image_path,
-      prompt: prompt,
-      max_tokens: opts[:max_tokens],
-      temperature: opts[:temperature],
-      top_p: opts[:top_p],
-      output_path: opts[:output],
-      use_flash_attention: opts[:use_flash_attention],
-      use_4bit: if(opts[:full_precision], do: false, else: opts[:use_4bit] || true)
-    )
+        case LivebookNx.Server.run_qwen3vl_inference(image_path, [prompt: prompt] ++ options) do
+          {:ok, result} ->
+            Mix.shell().info("Qwen3-VL inference completed:")
+            Mix.shell().info(result)
 
-    LivebookNx.Qwen3VL.run(config)
+          {:error, reason} ->
+            Mix.shell().error("Qwen3-VL inference failed: #{inspect(reason)}")
+            exit({:shutdown, 1})
+        end
+
+      _ ->
+        Mix.shell().error("Usage: mix qwen3vl <image_path> <prompt> [options]")
+        exit({:shutdown, 1})
+    end
   end
 end

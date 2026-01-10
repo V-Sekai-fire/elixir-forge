@@ -152,7 +152,7 @@ defmodule HuggingFaceDownloader do
       |> File.mkdir_p!()
 
       result = Req.get(url,
-        into: File.stream!(local_path, [], 65536),
+        into: File.stream!(local_path, [], 65_536),
         retry: :transient,
         max_redirects: 10
       )
@@ -277,7 +277,7 @@ name = "#{project_name}"
 version = "0.0.0"
 requires-python = "#{python_version}"
 dependencies = [
-#{Enum.map(dependencies, fn dep -> "  \"#{dep}\"," end) |> Enum.join("\n")}
+#{Enum.map_join(dependencies, "\n", fn dep -> "  \"#{dep}\"," end)}
 ]
 #{extra_config}
 """
@@ -849,7 +849,7 @@ defmodule SpanCollector do
                     # Non-zero exit code is an error
                     OpenTelemetry.Tracer.record_exception(e, [])
                     OpenTelemetry.Tracer.set_status(:error, "SystemExit(#{exit_code})")
-                    raise e
+                    reraise e, __STACKTRACE__
                   end
                 else
                   # Other Python exceptions are errors
@@ -859,7 +859,7 @@ defmodule SpanCollector do
                   rescue
                     _ -> OpenTelemetry.Tracer.set_status(:error, "Python exception: #{inspect(type_name)}")
                   end
-                  raise e
+                  reraise e, __STACKTRACE__
                 end
               rescue
                 _ ->
@@ -870,7 +870,7 @@ defmodule SpanCollector do
                   rescue
                     _ -> OpenTelemetry.Tracer.set_status(:error, "Python exception")
                   end
-                  raise e
+                  reraise e, __STACKTRACE__
               end
             _ ->
               # Non-Pythonx exceptions
@@ -880,7 +880,7 @@ defmodule SpanCollector do
               rescue
                 _ -> OpenTelemetry.Tracer.set_status(:error, inspect(e))
               end
-              raise e
+              reraise e, __STACKTRACE__
           end
       end
     end

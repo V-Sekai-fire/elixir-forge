@@ -6,9 +6,12 @@ defmodule LivebookNx.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Oban for job queuing
+      # Start Ecto repo first
+      LivebookNx.Repo,
+      # Start Oban for job queuing
       {Oban, Application.fetch_env!(:livebook_nx, Oban)},
-      # Other supervisors...
+      # LivebookNx server for managing operations
+      LivebookNx.Server
     ]
 
     opts = [strategy: :one_for_one, name: LivebookNx.Supervisor]
