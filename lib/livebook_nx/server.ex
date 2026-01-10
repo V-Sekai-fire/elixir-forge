@@ -199,7 +199,7 @@ defmodule LivebookNx.Server do
     with :ok <- check_database_not_running(state),
          :ok <- check_certificates_exist(),
          :ok <- check_cockroach_binary_exists(),
-         {:ok, output} <- start_cockroach_process(),
+         {:ok, _output} <- start_cockroach_process(),
          {:ok, pid} <- find_cockroach_pid(),
          new_state <- update_state_with_pid(state, pid),
          :ok <- create_database() do

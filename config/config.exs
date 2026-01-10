@@ -17,11 +17,12 @@ config :livebook_nx, LivebookNx.Repo,
   password: System.get_env("DATABASE_PASSWORD", "secure_password_123"),
   hostname: System.get_env("DATABASE_HOST", "localhost"),
   port: String.to_integer(System.get_env("DATABASE_PORT", "26257")),
-  ssl: [
+  # Use SSL in production, disable for local insecure CockroachDB
+  ssl: if(System.get_env("COCKROACH_INSECURE", "true") == "true", do: false, else: [
     cacertfile: System.get_env("DB_CA_CERT", "cockroach-certs/ca.crt"),
     certfile: System.get_env("DB_CLIENT_CERT", "cockroach-certs/client.root.crt"),
     keyfile: System.get_env("DB_CLIENT_KEY", "cockroach-certs/client.root.key")
-  ],
+  ]),
   migration_lock: nil
 
 # OpenTelemetry
