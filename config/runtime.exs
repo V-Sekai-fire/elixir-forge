@@ -12,6 +12,15 @@ if config_env() == :prod do
     ssl: true,
     ssl_opts: [cacertfile: "/path/to/ca.crt"]
 
+  # Oban queues for production
+  config :livebook_nx, Oban,
+    engine: Oban.Pro.Engines.Smart,
+    queues: [
+      default: String.to_integer(System.get_env("OBAN_DEFAULT_QUEUE") || "10"),
+      zimage: String.to_integer(System.get_env("OBAN_ZIMAGE_QUEUE") || "2")
+    ],
+    repo: LivebookNx.Repo
+
   # SeaweedFS config
   config :livebook_nx, :seaweedfs,
     endpoint: System.get_env("SEAWEEDFS_ENDPOINT") || "http://seaweedfs-master:9333",

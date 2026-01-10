@@ -4,7 +4,7 @@ import Config
 config :livebook_nx, Oban,
   repo: LivebookNx.Repo,
   plugins: [Oban.Plugins.Pruner],
-  queues: [default: 10]
+  queues: [default: 10, zimage: 2]
 
 # Database
 config :livebook_nx, LivebookNx.Repo,
@@ -24,11 +24,11 @@ config :opentelemetry,
 # Logger
 config :logger, level: :info
 
-# Pythonx configuration for Qwen3-VL
+# Pythonx configuration for Qwen3-VL and Z-Image-Turbo
 config :pythonx, :uv_init,
   pyproject_toml: """
 [project]
-name = "qwen3vl-inference"
+name = "livebook-nx-inference"
 version = "0.0.0"
 requires-python = "==3.10.*"
 dependencies = [
@@ -40,7 +40,15 @@ dependencies = [
   "numpy",
   "huggingface-hub",
   "bitsandbytes",
+  "diffusers @ git+https://github.com/huggingface/diffusers",
 ]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu118" }
+torchvision = { index = "pytorch-cu118" }
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
 
 [tool.uv.sources]
 torch = { index = "pytorch-cu118" }

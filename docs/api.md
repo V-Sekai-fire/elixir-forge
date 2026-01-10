@@ -79,36 +79,78 @@ Validates inference configuration parameters.
 - `:ok` - Valid configuration
 - `{:error, errors}` - Validation errors
 
-### LivebookNx.Repo
+### LivebookNx.ZImage
 
-Ecto repository for database operations.
+Main module for Z-Image-Turbo image generation.
+
+#### Functions
+
+##### `generate(prompt, opts)`
+
+Generates an image from a text prompt.
+
+**Parameters:**
+
+- `prompt` (string, required): Text description of the image to generate
+- `opts` (keyword list): Configuration options
+
+**Options:**
+
+- `:width` (integer): Image width in pixels (64-2048, default: 1024)
+- `:height` (integer): Image height in pixels (64-2048, default: 1024)
+- `:seed` (integer): Random seed (0 for random, default: 0)
+- `:num_steps` (integer): Number of inference steps (default: 4)
+- `:guidance_scale` (float): Guidance scale (default: 0.0)
+- `:output_format` (string): Output format "png", "jpg", "jpeg" (default: "png")
+
+**Returns:**
+
+- `{:ok, output_path}` - Successful generation with output file path
+- `{:error, reason}` - Error with reason
+
+**Example:**
+
+```elixir
+{:ok, image_path} = LivebookNx.ZImage.generate("a beautiful sunset", width: 1024, height: 1024)
+```
+
+##### `generate_batch(prompts, opts)`
+
+Generates multiple images from a list of prompts.
+
+**Parameters:**
+
+- `prompts` ([string], required): List of text prompts
+- `opts` (keyword list): Same options as `generate/2`
+
+**Returns:**
+
+- `{:ok, output_paths}` - List of successfully generated image paths
+- `{:error, reason}` - Error message if batch generation failed
+
+##### `queue_generation(prompt, opts)`
+
+Queues an image generation job for asynchronous processing.
+
+**Parameters:**
+
+- Same as `generate/2`
+
+**Returns:**
+
+- `{:ok, job}` - Job queued successfully
+- `{:error, changeset}` - Validation error
+
+### LivebookNx.ZImage.Worker
+
+Oban worker for asynchronous Z-Image-Turbo generation.
 
 #### Configuration
 
 ```elixir
-# In config/runtime.exs
-config :livebook_nx, LivebookNx.Repo,
-  username: "root",
-  password: "",
-  database: "livebook_nx",
-  hostname: "localhost",
-  port: 26257,
-  ssl: false,
-  pool_size: 10
-```
-
-#### Usage
-
-```elixir
-alias LivebookNx.Repo
-
-# Query operations
-Repo.all(from i in Inference, where: i.status == "completed")
-
-# Insert operations
-%Inference{}
-|> Inference.changeset(%{image_path: "test.jpg", prompt: "test"})
-|> Repo.insert()
+config :livebook_nx, Oban,
+  queues: [zimage: 2],  # Number of concurrent zimage jobs
+  repo: LivebookNx.Repo
 ```
 
 ### LivebookNx.Application

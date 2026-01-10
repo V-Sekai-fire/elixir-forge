@@ -73,6 +73,38 @@ mix qwen3vl photo.jpg "Analyze this image" --output analysis.txt
 
 The system automatically downloads and caches the Qwen3-VL model. Models are stored in `pretrained_weights/` directory.
 
+### Z-Image-Turbo Image Generation
+
+Generate photorealistic images from text prompts using the Z-Image-Turbo model.
+
+#### Basic Usage
+
+```bash
+# Generate an image
+mix zimage "a beautiful sunset over mountains"
+
+# With custom parameters
+mix zimage "a cat wearing a hat" --width 512 --height 512 --seed 42
+
+# Multiple prompts
+mix zimage "cat" "dog" "bird" --width 512
+```
+
+#### Available Options
+
+| Option             | Short | Default | Description                      |
+| ------------------ | ----- | ------- | -------------------------------- |
+| `--width`          | `-w`  | 1024    | Image width in pixels (64-2048)  |
+| `--height`         | `-h`  | 1024    | Image height in pixels (64-2048) |
+| `--seed`           | `-s`  | 0       | Random seed (0 for random)       |
+| `--steps`          |       | 4       | Number of inference steps        |
+| `--guidance-scale` | `-g`  | 0.0     | Guidance scale                   |
+| `--format`         | `-f`  | png     | Output format: png, jpg, jpeg    |
+
+#### Model Configuration
+
+Z-Image-Turbo models are automatically downloaded and cached in `pretrained_weights/Z-Image-Turbo/`.
+
 ### Asynchronous Job Processing
 
 For long-running inference tasks, use the job queue system:
@@ -80,14 +112,18 @@ For long-running inference tasks, use the job queue system:
 ```elixir
 # In your Elixir code
 alias LivebookNx.Qwen3VL
+alias LivebookNx.ZImage
 
-# Queue an inference job
+# Queue vision-language inference
 {:ok, job} = Qwen3VL.queue_inference(%{
   image_path: "path/to/image.jpg",
   prompt: "Describe this image",
   max_tokens: 100,
   temperature: 0.7
 })
+
+# Queue image generation
+{:ok, job} = ZImage.queue_generation("a beautiful landscape", width: 1024, height: 1024)
 
 # Check job status
 Oban.Job.get(job.id)

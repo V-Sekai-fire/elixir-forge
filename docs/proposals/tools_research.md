@@ -52,6 +52,29 @@ Your Elixir scripts follow a consistent pattern:
   - Rapid prototyping of 3D content
 - **Note**: Microsoft open-source project, available for self-hosting, cloud demos, and API access through Hugging Face and NVIDIA NIM
 
+#### Qwen Image Multiple Angles 3D Camera (MultimodalArt)
+
+- **Space**: https://huggingface.co/spaces/multimodalart/qwen-image-multiple-angles-3d-camera
+- **Published**: 2025
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - Multi-angle 3D camera generation from images
+- **Integration**: Generate multiple camera angles for 3D reconstruction from single image
+- **Script Name**: `qwen_multiple_angles_generation.exs`
+- **Features**: Based on Qwen vision-language models, generates multiple viewpoint images for 3D modeling
+
+#### Qwen Image Edit 2511 Multiple Angles LoRA (Fal)
+
+- **Model**: `fal/Qwen-Image-Edit-2511-Multiple-Angles-LoRA`
+- **Hugging Face**: https://huggingface.co/fal/Qwen-Image-Edit-2511-Multiple-Angles-LoRA
+- **Base Model**: Qwen/Qwen-Image-Edit-2511
+- **Published**: November 2025
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - Multi-angle camera control LoRA for image editing
+- **Integration**: Generate precise camera angles for 3D-consistent image editing
+- **Script Name**: `qwen_image_edit_multiple_angles_lora.exs`
+- **Features**: 96 camera poses (4 elevations × 8 azimuths × 3 distances), trained on 3000+ Gaussian Splatting renders, supports low-angle shots
+- **Note**: Fine-tuned LoRA for multi-view image generation, built by Lovis Odin at fal
+
 ### 2. Image Super-Resolution / Upscaling
 
 #### UltraZoom-2X

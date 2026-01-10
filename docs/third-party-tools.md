@@ -12,7 +12,7 @@ The platform integrates the following third-party tools:
 - **Optimized Tris-to-Quads Converter** - Advanced mesh optimization
 - **Robust Skin Weights Transfer** - Character rigging utilities
 - **UniRig** - Automatic rigging system
-- **Z-Image-Turbo** - Image generation and editing
+- **Z-Image-Turbo** - Image generation and editing _(integrated into main application)_
 
 ## Corrective Smooth Baker
 
