@@ -1,6 +1,6 @@
 # Third-Party Tools Guide
 
-Livebook Nx includes several integrated third-party AI tools for various computer vision and graphics tasks. This guide explains how to use each tool effectively.
+Forge includes several integrated third-party processing tools for various computer vision and graphics tasks. This guide explains how to use each tool effectively.
 
 ## Overview
 
@@ -72,11 +72,11 @@ result = baker.process_mesh(
 | `--smooth-factor`     | float | 0.5      | Smoothing intensity (0.0-1.0)  |
 | `--preserve-details`  | flag  | false    | Preserve fine details          |
 
-### Integration with Livebook Nx
+### Integration with Forge
 
 ```elixir
-defmodule LivebookNx.MeshProcessing do
-  alias LivebookNx.CorrectiveSmoothBaker
+defmodule Forge.MeshProcessing do
+  alias Forge.CorrectiveSmoothBaker
 
   def smooth_mesh(input_path, output_path) do
     CorrectiveSmoothBaker.process(input_path, output_path, %{
@@ -111,7 +111,7 @@ python main.py --text "Hello, world!" --output hello.wav
 
 # With voice style
 python main.py \
-  --text "Welcome to Livebook Nx" \
+  --text "Welcome to Forge" \
   --output welcome.wav \
   --voice female_casual \
   --emotion happy
@@ -153,8 +153,8 @@ python main.py \
 ### Integration
 
 ```elixir
-defmodule LivebookNx.TextToSpeech do
-  alias LivebookNx.KVoiceWalk
+defmodule Forge.TextToSpeech do
+  alias Forge.KVoiceWalk
 
   def synthesize(text, options \\ %{}) do
     KVoiceWalk.synthesize(text, %{
@@ -443,8 +443,8 @@ python -m zimage_turbo inpaint \
 ### Pipeline Processing
 
 ```elixir
-defmodule LivebookNx.ProcessingPipeline do
-  alias LivebookNx.{Qwen3VL, MeshProcessing, TextToSpeech}
+defmodule Forge.ProcessingPipeline do
+  alias Forge.{Qwen3VL, MeshProcessing, TextToSpeech}
 
   def process_3d_scene(image_path, mesh_path) do
     # Analyze image with vision model
@@ -473,8 +473,8 @@ end
 ### Batch Processing
 
 ```elixir
-defmodule LivebookNx.BatchProcessor do
-  alias LivebookNx.MeshProcessing
+defmodule Forge.BatchProcessor do
+  alias Forge.MeshProcessing
 
   def process_mesh_batch(input_dir, output_dir) do
     Path.wildcard("#{input_dir}/*.obj")

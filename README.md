@@ -3,16 +3,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Elixir](https://img.shields.io/badge/Elixir-1.15+-purple)](https://elixir-lang.org/)
 
-A comprehensive AI inference platform featuring multi-modal AI models including Z-Image-Turbo image generation and Qwen3-VL vision-language models, with SQLite-backed job processing.
+A comprehensive computation platform featuring multi-modal computing models including Z-Image-Turbo image generation and Qwen3-VL vision-language models, with SQLite-backed job processing.
 
 ## ✨ Features
 
 - **Image Generation**: Z-Image-Turbo for high-speed text-to-image creation
-- **Vision-Language AI**: Qwen3-VL model for image understanding and description
+- **Vision-Language Processing**: Qwen3-VL model for image understanding and description
 - **SQLite Database**: Embedded database with job queue persistence
 - **Async Processing**: Oban job system for background task execution
-- **Multi-Modal Pipeline**: End-to-end AI workflows combining generation and analysis
-- **Production Ready**: Containerized deployment with optimized ML performance
+- **Multi-Modal Pipeline**: End-to-end automated workflows combining generation and analysis
+- **Production Ready**: Containerized deployment with optimized performance
 
 ## 🚀 Quick Start
 
@@ -66,7 +66,7 @@ Forge uses SQLite as an embedded database for job queue persistence and backgrou
 ### Database Features
 
 - **Embedded SQLite**: File-based database, no external dependencies
-- **Job Persistence**: Oban queues store background AI jobs
+- **Job Persistence**: Oban queues store background processing jobs
 - **Migration Support**: Automatic schema creation and updates
 - **Concurrent Access**: SQLite WAL mode for better performance
 
@@ -88,7 +88,7 @@ mix oban.tel
 - **[📖 User Guide](docs/user-guide.md)** - Complete usage guide
 - **[🛠️ Setup Guide](docs/setup.md)** - Installation and deployment
 - **[🔧 API Reference](docs/api.md)** - Technical documentation
-- **[🧰 Third-Party Tools](docs/third-party-tools.md)** - Integrated AI tools
+- **[🧰 Third-Party Tools](docs/third-party-tools.md)** - Integrated processing tools
 
 ## 🏗️ Architecture
 
@@ -99,7 +99,7 @@ Forge
 │   ├── Qwen3-VL Vision-Language Engine
 │   ├── Job Queue System (Oban)
 │   └── SQLite Database (Ecto)
-├── AI Models
+├── Processing Models
 │   ├── Z-Image-Turbo (Image Generation)
 │   └── Qwen3-VL (Vision Analysis)
 └── Third-Party Tools

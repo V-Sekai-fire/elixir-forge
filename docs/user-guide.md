@@ -1,15 +1,15 @@
-# Livebook Nx User Guide
+# Forge User Guide
 
-Livebook Nx is a comprehensive Elixir-based AI inference platform that provides vision-language model capabilities using Qwen3-VL, with distributed storage support via CockroachDB and SeaweedFS.
+Forge is a comprehensive Elixir-based computation platform that provides vision-language model capabilities using Qwen3-VL, with embedded SQLite database support.
 
 ## Overview
 
 This platform enables you to:
 
 - Run Qwen3-VL vision-language inference on images
-- Process AI tasks asynchronously with job queuing
-- Store and retrieve data using distributed databases and file systems
-- Integrate with various third-party AI tools and utilities
+- Process computation tasks asynchronously with job queuing
+- Store and retrieve data using embedded database and file systems
+- Integrate with various third-party processing tools and utilities
 
 ## Quick Start
 
@@ -17,8 +17,7 @@ This platform enables you to:
 
 - Elixir 1.15+ with Erlang/OTP 26+
 - Python 3.8+ (managed via uv)
-- CockroachDB (optional, for job queuing features)
-- SeaweedFS (optional, for distributed file storage)
+- SQLite (bundled, for job queuing features)
 
 ### Installation
 
@@ -26,17 +25,14 @@ This platform enables you to:
 
    ```bash
    git clone <repository-url>
-   cd livebook-nx
+   cd forge
    mix deps.get
    mix compile
    ```
 
 2. **Full setup (with database for job queuing):**
    ```bash
-   mix run tools/generate_certs.exs  # Generate certificates
-   mix crdb.start                    # Start CockroachDB
-   mix ecto.migrate                  # Setup database tables
-   mix run priv/repo/seeds.exs       # Load initial data
+   mix ecto.setup                    # Create SQLite DB and run migrations
    ```
 
 ## Core Features
@@ -112,8 +108,8 @@ For long-running inference tasks, use the job queue system:
 
 ```elixir
 # In your Elixir code
-alias LivebookNx.Qwen3VL
-alias LivebookNx.ZImage
+alias Forge.Qwen3VL
+alias Forge.ZImage
 
 # Queue vision-language inference
 {:ok, job} = Qwen3VL.queue_inference(%{
@@ -130,59 +126,26 @@ alias LivebookNx.ZImage
 Oban.Job.get(job.id)
 ```
 
-### Distributed Storage Integration
+### Database Integration
 
-#### CockroachDB Setup
+Forge uses SQLite as an embedded database for job persistence and queuing:
 
-For distributed database operations:
+#### Database Setup
 
-1. **Install CockroachDB:**
-
-   ```bash
-   # Using Docker
-   docker run -d --name cockroach \
-     -p 26257:26257 -p 8080:8080 \
-     cockroachdb/cockroach:v22.1.64b21683521d9a8735ad \
-     start-single-node --insecure
-   ```
-
-2. **Configure connection:**
-   ```elixir
-   # In config/runtime.exs
-   config :livebook_nx, LivebookNx.Repo,
-     username: "root",
-     password: "",
-     database: "livebook_nx",
-     hostname: "localhost",
-     port: 26257,
-     ssl: false
-   ```
-
-#### SeaweedFS Setup
-
-For distributed file storage:
-
-1. **Install SeaweedFS:**
+1. **Automatic setup:**
 
    ```bash
-   # Download and run
-   wget https://github.com/seaweedfs/seaweedfs/releases/download/4.05/linux_amd64.tar.gz
-   tar -xzf linux_amd64.tar.gz
-   ./weed server -dir=/tmp/seaweedfs
+   mix ecto.setup  # Creates forge.db and runs migrations
    ```
 
-2. **Configure in application:**
-   ```elixir
-   config :livebook_nx,
-     seaweedfs: %{
-       master_url: "http://localhost:9333",
-       filer_url: "http://localhost:8888"
-     }
+2. **Check job queue status:**
+   ```bash
+   mix oban.tel    # View active jobs and workers
    ```
 
 ## Third-Party Tools Integration
 
-The platform includes several integrated AI tools:
+The platform includes several integrated processing tools:
 
 ### Corrective Smooth Baker
 
@@ -224,26 +187,25 @@ python run.py --input model.fbx --output rigged_model.fbx
 
 ### Core Modules
 
-- `LivebookNx.Qwen3VL` - Main inference interface
-- `LivebookNx.Repo` - Database operations
-- `LivebookNx.Application` - Application supervisor
+- `Forge.Qwen3VL` - Vision-language inference interface
+- `Forge.Repo` - SQLite database operations
+- `Forge.Application` - Application supervisor
 
 ### CLI Tasks
 
-- `mix qwen3vl` - Run inference from command line
-- `mix setup` - Initialize the project
+- `mix qwen3vl` - Run vision-language inference on images
+- `mix zimage` - Generate images from text prompts
+- `mix ecto.setup` - Initialize SQLite database
 - `mix test` - Run test suite
 
 ## Configuration
 
 ### Environment Variables
 
-| Variable           | Description                | Default |
-| ------------------ | -------------------------- | ------- |
-| `DATABASE_URL`     | CockroachDB connection URL | -       |
-| `SEAWEEDFS_MASTER` | SeaweedFS master URL       | -       |
-| `SEAWEEDFS_FILER`  | SeaweedFS filer URL        | -       |
-| `PYTHON_VERSION`   | Python version for uv      | 3.11    |
+| Variable         | Description               | Default  |
+| ---------------- | ------------------------- | -------- |
+| `DATABASE_PATH`  | SQLite database file path | forge.db |
+| `PYTHON_VERSION` | Python version for uv     | 3.11     |
 
 ### Runtime Configuration
 
@@ -252,15 +214,15 @@ Edit `config/runtime.exs` for production settings:
 ```elixir
 import Config
 
-config :livebook_nx,
+config :forge,
   qwen3vl: %{
     use_4bit: true,
     use_flash_attention: false,
     default_max_tokens: 4096
   }
 
-config :livebook_nx, LivebookNx.Repo,
-  # Database config here
+config :forge, Forge.Repo,
+  database: System.get_env("DATABASE_PATH") || "forge_prod.db"
 ```
 
 ## Troubleshooting
@@ -277,9 +239,9 @@ config :livebook_nx, LivebookNx.Repo,
    - Check Python version compatibility
 
 3. **Database connection errors:**
-   - Verify CockroachDB is running
-   - Check connection credentials
+   - Verify SQLite database exists: `ls *.db`
    - Run migrations: `mix ecto.migrate`
+   - Check permissions on database file
 
 4. **Memory issues:**
    - Use `--use-4bit` for lower memory usage
@@ -303,7 +265,7 @@ mix test
 
 ### Adding New Features
 
-1. Create new modules in `lib/livebook_nx/`
+1. Create new modules in `lib/forge/`
 2. Add tests in `test/`
 3. Update documentation
 4. Submit pull request
