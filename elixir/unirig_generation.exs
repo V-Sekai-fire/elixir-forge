@@ -87,7 +87,7 @@ dependencies = [
   "wandb",
   "torch",
   "libigl",
-  # Note: UniRig is used from local thirdparty/UniRig directory
+  # Note: UniRig is used from local ../thirdparty/UniRig directory
 ]
 
 [tool.uv.sources]
@@ -687,14 +687,14 @@ print("\n=== Step 1: Setup UniRig Environment ===")
 
 # Check if UniRig repository is available
 # Try to find UniRig in thirdparty relative to current working directory
-unirig_path = Path.cwd() / "thirdparty" / "UniRig"
+unirig_path = Path.cwd() / ".." / "thirdparty" / "UniRig"
 
 if not unirig_path.exists():
     unirig_path = None
-    print("⚠ UniRig repository not found in thirdparty/UniRig")
-    print(f"  Searched at: {Path.cwd() / 'thirdparty' / 'UniRig'}")
-    print("  Please ensure thirdparty/UniRig exists")
-    raise FileNotFoundError("UniRig repository not found. Expected at: thirdparty/UniRig")
+    print("⚠ UniRig repository not found in ../thirdparty/UniRig")
+    print(f"  Searched at: {Path.cwd() / '..' / 'thirdparty' / 'UniRig'}")
+    print("  Please ensure ../thirdparty/UniRig exists")
+    raise FileNotFoundError("UniRig repository not found. Expected at: ../thirdparty/UniRig")
 else:
     unirig_path = unirig_path.resolve()
     print(f"✓ Using UniRig from: {unirig_path}")

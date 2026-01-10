@@ -1,0 +1,290 @@
+# Tools Research - Matching Script Style
+
+## Script Style Analysis
+
+Your Elixir scripts follow a consistent pattern:
+
+- **Language**: Elixir CLI scripts using `Mix.install`
+- **Python Integration**: Via `Pythonx` for ML model execution
+- **Observability**: OpenTelemetry for tracing and performance monitoring
+- **Model Source**: Hugging Face model repositories
+- **Structure**: Shared utilities, ArgsParser modules, consistent error handling
+- **Dependencies**: Managed via `uv` (Python package manager)
+
+## Existing Tools (Avoid These)
+
+- **Text-to-Image**: Z-Image-Turbo
+- **Image-to-3D**: PartCrafter, Omnipart
+- **Vision-Language**: Qwen3-VL
+- **Video Processing**: SAM3 (segmentation)
+- **Audio TTS**: Kokoro TTS
+- **Voice Cloning**: KVoiceWalk
+
+## Recommended Tools by Category (NEW - Different from Existing)
+
+**Note: All models listed below are FOSS (Free and Open Source Software) with permissive licenses (MIT, Apache 2.0, BSD, or similar).**
+
+### 1. Image-to-3D Generation
+
+#### TRELLIS-2 (Microsoft)
+
+- **Model**: TRELLIS-2
+- **Repository**: https://github.com/microsoft/TRELLIS.2
+- **Website**: https://trellis-2.org
+- **Published**: 2025
+- **License**: Open-source (check repository for specific license) ✅ FOSS
+- **Style Match**: ✅ High - Advanced image-to-3D conversion with structured latent space
+- **Integration**: Convert 2D images into high-resolution 3D models with full PBR materials
+- **Script Name**: `trellis2_generation.exs`
+- **Features**:
+  - **Instant Image-to-3D Conversion**: Transforms 2D images into high-resolution 3D models with detailed textures and geometry
+  - **Structured Latent Representation**: Uses compact structured latent space with native 3D Variational Autoencoder (VAE) architecture
+  - **PBR-Ready Outputs**: Generates 3D models with Physically Based Rendering materials (roughness, metallic, opacity channels)
+  - **O-Voxel and Sparse Compression**: Employs O-Voxel representation for preserving complex topologies and rich texture information
+  - **Multi-Format Support**: Exports models in GLB, OBJ, and radiance fields formats
+  - **Game Engine Compatible**: Outputs suitable for game engines and AR/VR applications
+  - **Single or Multiple Image Inputs**: Supports both single image and multi-view image inputs
+  - **High-Resolution Output**: Produces industry-ready 3D assets with photorealistic textures
+- **Use Cases**:
+  - Game development and asset creation
+  - AR/VR and immersive experiences
+  - 3D design and visualization
+  - Rapid prototyping of 3D content
+- **Note**: Microsoft open-source project, available for self-hosting, cloud demos, and API access through Hugging Face and NVIDIA NIM
+
+### 2. Image Super-Resolution / Upscaling
+
+#### UltraZoom-2X
+
+- **Model**: `andrewdalpino/UltraZoom-2X`
+- **Hugging Face**: https://huggingface.co/andrewdalpino/UltraZoom-2X
+- **Paper**: https://arxiv.org/abs/2506.13756
+- **Published**: June 2025
+- **Style Match**: ✅ High - Fast single image super-resolution
+- **Integration**: Two-stage "zoom in and enhance" mechanism
+- **Script Name**: `ultrazoom_upscaling.exs`
+- **Features**: Fast and scalable, controllable enhancements (denoising, deblurring, deartifacting), full RGB support
+
+### 3. Image Customization
+
+#### DreamO
+
+- **Repository**: https://github.com/bytedance/DreamO
+- **Paper**: SIGGRAPH Asia 2025
+- **Published**: May 2025 (v1.1 released June 2025)
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - Unified framework for image customization
+- **Integration**: Image customization with multiple condition support
+- **Script Name**: `dreamo_customization.exs`
+- **Features**:
+  - **IP Task**: IP-Adapter-like functionality with higher fidelity using VAE-based feature encoding
+  - **ID Task**: Facial identity preservation (similar to InstantID/PuLID) with higher facial fidelity
+  - **Try-On**: Virtual try-on for tops, bottoms, glasses, hats, supports multiple garments
+  - **Style**: Style transfer (similar to Style-Adapter/InstantStyle)
+  - **Multi-Condition**: Combine multiple conditions (ID, IP, Try-On) with feature routing to mitigate conflicts
+  - Based on FLUX model with Turbo LoRA support (12 steps vs 25+)
+  - Supports quantization (int8, Nunchaku) for consumer GPUs (8GB, 16GB, 24GB)
+  - CPU offloading support for low-memory GPUs
+  - macOS Apple Silicon (MPS) support
+  - Native ComfyUI implementation available
+  - Gradio demo included
+- **Note**: SIGGRAPH Asia 2025, unified framework outperforms specialized methods in their respective tasks
+
+#### Qwen-Image-Edit-2509
+
+- **Model**: `Qwen/Qwen-Image-Edit-2509`
+- **Hugging Face**: https://huggingface.co/Qwen/Qwen-Image-Edit-2509
+- **Paper**: https://arxiv.org/abs/2508.02324
+- **Published**: September 2025
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - Advanced image-to-image editing with multi-image support
+- **Integration**: Image editing with text prompts, multi-image composition, ControlNet support
+- **Script Name**: `qwen_image_edit.exs`
+- **Features**:
+  - **Multi-image Editing**: Supports 1-3 input images with combinations like "person + person", "person + product", "person + scene"
+  - **Enhanced Consistency**: Improved person editing (facial identity preservation, portrait styles, pose transformations), product editing (product poster generation), and text editing (content, fonts, colors, materials)
+  - **Native ControlNet Support**: Depth maps, edge maps, keypoint maps, and more
+  - **Text Rendering**: Unique text rendering capability for meme images and long text with identity preservation
+  - **Old Photo Restoration**: Enhanced person consistency for restoration tasks
+  - **Precise Text Editing**: Significantly enhanced text editing capabilities
+  - Based on Qwen-Image-Edit architecture with further training
+  - Uses `QwenImageEditPlusPipeline` from diffusers
+- **Note**: Monthly iteration of Qwen-Image-Edit, significant improvements over August 2025 release
+
+### 4. Text Generation (LLMs)
+
+#### Qwen3 (Alibaba)
+- **Model**: `Qwen/Qwen3-8B` or variants
+- **Hugging Face**: https://huggingface.co/Qwen/Qwen3-8B
+- **Paper**: https://arxiv.org/abs/2505.09388
+- **Published**: May 2025
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - Latest generation open-source LLM
+- **Integration**: Text generation, chat, reasoning, agent capabilities
+- **Script Name**: `qwen3_text_generation.exs`
+- **Features**: Seamless switching between thinking mode (complex reasoning, math, coding) and non-thinking mode (efficient dialogue), superior reasoning capabilities, enhanced human preference alignment, multilingual support, multiple sizes available
+
+### 5. Code Generation
+
+#### Qwen Coder
+
+- **Model**: `Qwen/Qwen2.5-Coder-7B-Instruct` or variants
+- **Hugging Face**: https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct
+- **Repository**: https://github.com/QwenLM/Qwen2.5-Coder
+- **Paper**: https://arxiv.org/abs/2409.12186
+- **Published**: September 2024
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - State-of-the-art code LLM
+- **Integration**: Code generation, completion, understanding
+- **Script Name**: `qwen_coder_generation.exs`
+- **Features**: High performance, multiple programming languages, instruction-tuned, better than StarCoder2
+
+### 6. Speech Recognition / Transcription
+
+#### Distil-Whisper
+
+- **Model**: `distil-whisper/distil-large-v3` or variants
+- **Hugging Face**: https://huggingface.co/distil-whisper/distil-large-v3
+- **Repository**: https://github.com/huggingface/distil-whisper
+- **Paper**: https://arxiv.org/abs/2311.00430
+- **Published**: November 2023
+- **License**: MIT ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - Faster, smaller Whisper
+- **Integration**: Distilled version of Whisper
+- **Script Name**: `distil_whisper_transcription.exs`
+- **Features**:
+  - 6x faster than Whisper
+  - 50% smaller
+  - Similar accuracy
+  - Fully permissive MIT license
+
+### 7. Image Classification / Object Detection
+
+#### RF-DETR (Roboflow)
+
+- **Model**: `roboflow/rfdetr-base` or variants (nano, small, medium, base)
+- **Hugging Face**: https://huggingface.co/roboflow/rfdetr-base
+- **Repository**: https://github.com/roboflow/rf-detr
+- **Paper**: https://arxiv.org/abs/2511.09554
+- **Published**: March 2025
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - SOTA real-time object detection and segmentation
+- **Integration**: Real-time transformer-based detection and instance segmentation
+- **Script Name**: `rfdetr_detection.exs`
+- **Features**: First real-time model to exceed 60 AP on COCO, state-of-the-art on RF100-VL benchmark, instance segmentation support (RF-DETR Seg), faster and more accurate than YOLO at similar sizes, multiple model sizes (Nano, Small, Medium, Base)
+- **Note**: Based on DETR architecture, optimized for real-time performance
+
+### 8. Image Segmentation
+
+#### Segment Anything Model (SAM)
+
+- **Model**: `facebook/sam-vit-base` or variants
+- **Hugging Face**: https://huggingface.co/facebook/sam-vit-base
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - Image segmentation
+- **Integration**: Segment objects in images (different from SAM3 which is video)
+- **Script Name**: `sam_segmentation.exs`
+- **Note**: Different from SAM3 (video segmentation), fully open-source
+
+### 9. Depth Estimation
+
+#### DepthPro (Apple)
+
+- **Model**: `apple/DepthPro` or `apple/DepthPro-hf`
+- **Hugging Face**: https://huggingface.co/apple/DepthPro
+- **Repository**: https://github.com/apple/ml-depth-pro
+- **Paper**: https://arxiv.org/abs/2410.02073
+- **Published**: October 2024
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - Sharp monocular metric depth estimation
+- **Integration**: Zero-shot metric monocular depth estimation
+- **Script Name**: `depthpro_estimation.exs`
+- **Features**:
+  - High-resolution depth maps with sharp boundaries
+  - Metric depth with absolute scale (no camera intrinsics needed)
+  - Fast inference (2.25MP depth map in 0.3s on GPU)
+  - State-of-the-art performance on in-the-wild scenes
+  - Fully open-source (Apache 2.0)
+
+### 10. Pose Estimation
+
+#### YOLO-NAS-POSE
+
+- **Model**: YOLO-NAS-POSE (N, S, M, L variants)
+- **Repository**: https://github.com/Deci-AI/super-gradients
+- **Documentation**: https://github.com/Deci-AI/super-gradients/blob/master/YOLONAS-POSE.md
+- **License**: Open-source (pre-trained weights for non-commercial use) ⚠️ Custom license
+- **Style Match**: ✅ High - SOTA pose estimation with real-time performance
+- **Integration**: Keypoint detection and pose estimation
+- **Script Name**: `yolo_nas_pose_estimation.exs`
+- **Features**:
+  - State-of-the-art performance, outperforms YOLOv8-Pose and DEKR
+  - Real-time inference (2.35ms - 8.86ms on T4 GPU for 640x640 images)
+  - Multiple model sizes (N, S, M, L)
+  - Quantization-aware blocks for optimized performance
+  - Based on YOLO-NAS architecture with pose-optimized head
+  - Transfer learning from YOLO-NAS weights
+- **Note**: Generated by Deci's Neural Architecture Search (AutoNAC™) technology
+
+#### MediaPipe Pose
+
+- **Model**: `qualcomm/MediaPipe-Pose-Estimation`
+- **Hugging Face**: https://huggingface.co/qualcomm/MediaPipe-Pose-Estimation
+- **License**: Apache 2.0 ✅ FOSS (OSI-approved)
+- **Style Match**: ✅ High - Real-time pose estimation
+- **Integration**: Detect and track human body poses
+- **Script Name**: `mediapipe_pose_estimation.exs`
+- **Features**:
+  - Real-time performance
+  - Bounding boxes and pose skeletons
+  - Mobile-optimized
+  - Fully open-source (Apache 2.0)
+
+### 11. Mesh Remeshing / Quad Topology
+
+#### QRemeshify
+
+- **Repository**: https://github.com/ksami/QRemeshify
+- **Gumroad**: https://ksami.gumroad.com/l/QRemeshify
+- **License**: GPL-3.0 ✅ FOSS (OSI-approved)
+- **Published**: October 2024 (v1.1.0 released)
+- **Style Match**: ⚠️ Medium - Blender extension, not a Python library
+- **Integration**: Blender addon for quad remeshing, requires Blender Python API
+- **Script Name**: `qremeshify_remeshing.exs` (if integrated via Blender Python API)
+- **Features**:
+  - **High-Quality Quad Topology**: Produces clean and well-structured quad meshes suitable for further modeling and animation
+  - **Symmetry Support**: Allows for symmetrical remeshing along specified axes, reducing manual adjustments
+  - **Edge Flow Guidance**: Utilizes marked seams, sharp edges, material boundaries, and face set boundaries to guide edge flow
+  - **Advanced Fine-Tuning**: Offers options for detailed adjustments to meet specific modeling requirements
+  - **Integrated Solution**: Operates entirely within Blender, eliminating the need for external software
+  - Based on QuadWild algorithm with Bi-MDF solver for efficient and effective remeshing
+  - Preprocessing option for decimation, triangulation, and geometry fixes
+  - Post-processing smoothing option
+  - Sharp feature detection from edge angles and marked edges
+  - Cache support for faster iteration when tweaking settings
+  - Debug mode for intermediate mesh visualization
+  - Scale factor (density) option for controlling mesh resolution
+- **Requirements**:
+  - Blender 4.2 and above
+  - Windows (Linux and macOS support being tested)
+- **Installation**:
+  1. Download the zip file from GitHub repository or Gumroad page
+  2. In Blender, navigate to `Edit > Preferences > Add-ons`
+  3. Click on `Install from Disk...` and select the downloaded zip file
+  4. Ensure the checkbox is ticked to enable QRemeshify
+- **Usage**: Access QRemeshify from the 3D view N-Panel (press `N` in the 3D view) while in Object mode. Remeshing time depends on various factors and may take longer for complex models.
+- **Pipeline**:
+  1. Optional: Cut mesh in half for symmetry
+  2. Calculate sharp features
+  3. QuadWild preprocessing and field calculation
+  4. QuadWild field tracing and patch splitting
+  5. Quadrangulation and smoothing
+  6. Optional: Add mirror modifier for symmetry
+- **Changelog Highlights**:
+  - **v1.1.0**: Performance improvements, added guidance of edge flow using material and face set boundaries, increased visibility of scale factor (density) option
+  - **v1.0.2**: Set object back to original location
+  - **v1.0.1**: Fixed issues with special characters in object names, resolved problems with edges marked as sharp not being recognized
+- **Note**: This is a Blender extension, not a standalone Python library. Integration would require using Blender's Python API (`bpy` module) or extracting the underlying QuadWild library. For Elixir integration, would need to either:
+  - Call Blender via command-line with Python scripts
+  - Extract and use the underlying QuadWild library directly
+  - Use Blender's Python API through subprocess calls

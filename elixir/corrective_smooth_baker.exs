@@ -304,9 +304,9 @@ input_path = os.path.normpath(input_path)
 output_path = os.path.normpath(output_path)
 
 # Add corrective smooth baker to path
-corrective_smooth_baker_path = os.path.join(workspace_root, 'thirdparty', 'corrective_smooth_baker')
+corrective_smooth_baker_path = os.path.join(workspace_root, '..', 'thirdparty', 'corrective_smooth_baker')
 if os.path.exists(corrective_smooth_baker_path):
-    sys.path.insert(0, os.path.join(workspace_root, 'thirdparty'))
+    sys.path.insert(0, os.path.join(workspace_root, '..', 'thirdparty'))
 else:
     raise ImportError(f"Could not find corrective_smooth_baker at {corrective_smooth_baker_path}")
 
