@@ -20,8 +20,8 @@ defmodule Forge.ZImage do
 
   require Logger
 
-  # Load shared utilities
-  Code.eval_file("lib/forge/shared_utils.exs")
+  alias SpanCollector
+  alias HuggingFaceDownloader
 
   @model_id "Tongyi-MAI/Z-Image-Turbo"
   @weights_dir "priv/pretrained_weights/Z-Image-Turbo"
@@ -266,41 +266,13 @@ defmodule Forge.ZImage do
   This is the internal entry point for workers.
   """
   @spec run(t()) :: {:ok, Path.t()} | {:error, term()}
-  def run(%__MODULE__{} = config) do
+  def run(%__MODULE__{} = _config) do
     # Legacy function - this will only work if the struct has the right fields
     # For new code, use the new API: load_model() + generation()
     {:error, "Legacy struct-based run not supported. Use load_model() + generation() instead."}
   end
 
-  @doc """
-  Queues an image generation job for asynchronous processing.
 
-  ## Examples
-
-      iex> Forge.ZImage.queue_generation("a beautiful landscape")
-      {:ok, %Oban.Job{}}
-  """
-  @spec queue_generation(String.t(), keyword()) :: {:ok, Oban.Job.t()} | {:error, term()}
-  def queue_generation(prompt, opts \\ []) do
-    config = %{
-      prompt: prompt,
-      width: Keyword.get(opts, :width, 1024),
-      height: Keyword.get(opts, :height, 1024),
-      seed: Keyword.get(opts, :seed, 0),
-      num_steps: Keyword.get(opts, :num_steps, 4),
-      guidance_scale: Keyword.get(opts, :guidance_scale, 0.0),
-      output_format: Keyword.get(opts, :output_format, "png")
-    }
-
-    case validate_config(struct(__MODULE__, config)) do
-      :ok ->
-        %{config: config}
-        |> Forge.ZImage.Worker.new()
-        |> Oban.insert()
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
 
   # Bumblebee-compatible preprocessing function
   @doc false
@@ -420,28 +392,6 @@ defmodule Forge.ZImage do
     weights_dir: String.t(),
     loaded?: boolean()
   }
-
-  # Private functions
-
-  # Legacy validation - kept for compatibility
-  defp validate_config(config) do
-    cond do
-      String.trim(config.prompt) == "" ->
-        {:error, "Prompt cannot be empty"}
-      config.width < 64 or config.width > 2048 ->
-        {:error, "Width must be between 64 and 2048 pixels"}
-      config.height < 64 or config.height > 2048 ->
-        {:error, "Height must be between 64 and 2048 pixels"}
-      config.num_steps < 1 ->
-        {:error, "Number of steps must be at least 1"}
-      config.guidance_scale < 0.0 ->
-        {:error, "Guidance scale must be non-negative"}
-      config.output_format not in ["png", "jpg", "jpeg"] ->
-        {:error, "Output format must be png, jpg, or jpeg"}
-      true ->
-        :ok
-    end
-  end
 
   # Downloads model if needed
   def download_model do

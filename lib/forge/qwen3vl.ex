@@ -20,8 +20,8 @@ defmodule Forge.Qwen3VL do
 
   require Logger
 
-  # Load shared utilities
-  Code.eval_file("lib/forge/shared_utils.exs")
+  alias SpanCollector
+  alias HuggingFaceDownloader
 
   @model_id "huihui-ai/Huihui-Qwen3-VL-4B-Instruct-abliterated"
   @weights_dir "priv/pretrained_weights/Huihui-Qwen3-VL-4B-Instruct-abliterated"
@@ -214,15 +214,15 @@ defmodule Forge.Qwen3VL do
   end
 
   # Compatibility function for Mix task interface
-  def run(config_struct) do
+  def run(%__MODULE__{} = config_struct) do
     # Convert struct to map format expected by inference/2
     params = Map.from_struct(config_struct)
     model = elem(load_model(), 1)
     inference(model, params)
   end
 
-  # Legacy struct-based run function for backward compatibility
-  def run(config_map) when is_map(config_map) do
+  # Legacy map-based run function for backward compatibility
+  def run(config_map) when is_map(config_map) and not is_struct(config_map) do
     model = elem(load_model(), 1)
     inference(model, config_map)
   end
@@ -273,9 +273,8 @@ defmodule Forge.Qwen3VL do
     # Convert Bumblebee format to Forge format
     # Handle single image or list of images
     image_path = case images do
-      [{image_tensor, _ }] -> "bumblebee_image.jpg" # TODO: convert tensor
+      [{_image_tensor, _ }] -> "bumblebee_image.jpg" # TODO: convert tensor
       [] -> raise "No image provided"
-      [{image_tensor, _ }] -> "bumblebee_image.jpg" # TODO: convert tensor
       _ -> raise "Multiple images not supported in this integration"
     end
 
@@ -430,7 +429,7 @@ print(response)
   end
 
   @doc """
-  Queue Qwen3-VL inference for asynchronous processing.
+  Run Qwen3-VL inference synchronously.
 
   ## Parameters
   - `image_path` - Path to the input image
@@ -447,11 +446,10 @@ print(response)
 
   ## Examples
 
-      iex> LivebookNx.Qwen3VL.queue_inference("image.jpg", "Describe this image")
-      {:ok, %Oban.Job{}}
+      iex> Forge.Qwen3VL.infer("image.jpg", "Describe this image")
+      {:ok, "The image shows..."}
   """
-  @spec queue_inference(String.t(), String.t(), keyword()) :: {:ok, Oban.Job.t()} | {:error, term()}
-  def queue_inference(image_path, prompt, opts \\ []) do
+  def infer(image_path, prompt, opts \\ []) do
     config = %{
       image_path: image_path,
       prompt: prompt,
@@ -463,13 +461,9 @@ print(response)
       use_4bit: Keyword.get(opts, :use_4bit, true)
     }
 
-    case validate_config(struct(__MODULE__, config)) do
-      :ok ->
-        %{config: config}
-        |> Forge.Qwen3VL.Worker.new()
-        |> Oban.insert()
-      {:error, reason} ->
-        {:error, reason}
-    end
+    # Validate config (raises on error)
+    validate_config(struct(__MODULE__, config))
+
+    run(struct(__MODULE__, config))
   end
 end

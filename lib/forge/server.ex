@@ -100,18 +100,18 @@ defmodule Forge.Server do
   end
 
   @impl true
-  def handle_call({:queue_qwen3vl, image_path, opts}, _from, state) do
-    Logger.info("Queueing Qwen3-VL inference job", %{image_path: image_path})
+  def handle_call({:run_qwen3vl, image_path, opts}, _from, state) do
+    Logger.info("Running Qwen3-VL inference", %{image_path: image_path})
 
-    result = Qwen3VL.queue_inference(image_path, opts)
+    result = Qwen3VL.infer(image_path, opts)
     {:reply, result, state}
   end
 
   @impl true
-  def handle_call({:queue_zimage, prompt, opts}, _from, state) do
-    Logger.info("Queueing Z-Image generation job", %{prompt: prompt})
+  def handle_call({:run_zimage, prompt, opts}, _from, state) do
+    Logger.info("Running Z-Image generation", %{prompt: prompt})
 
-    result = ZImage.queue_generation(prompt, opts)
+    result = ZImage.generate(prompt, opts)
     {:reply, result, state}
   end
 

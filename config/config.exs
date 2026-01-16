@@ -1,20 +1,6 @@
 import Config
 
 # Configure the main application
-config :forge,
-  ecto_repos: [Forge.Repo]
-
-# Configure Oban
-config :forge, Oban,
-  repo: Forge.Repo,
-  plugins: [Oban.Plugins.Pruner],
-  queues: [default: 5, ml: 8],
-  notifier: Oban.Notifiers.Isolated
-
-# Database (SQLite for simple embedded database)
-config :forge, Forge.Repo,
-  database: System.get_env("DATABASE_PATH", "forge.db"),
-  migration_lock: nil
 
 # OpenTelemetry
 config :opentelemetry,

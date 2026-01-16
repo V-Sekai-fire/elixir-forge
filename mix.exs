@@ -44,9 +44,6 @@ defmodule Forge.MixProject do
       {:pythonx, "~> 0.4"},
       {:jason, "~> 1.4"},
       {:req, "~> 0.5"},
-      {:oban, "~> 2.17"},
-      {:ecto_sql, "~> 3.10"},
-      {:ecto_sqlite3, "~> 0.12"},  # SQLite for simple embedded database
       {:opentelemetry_api, "~> 1.3"},
       {:opentelemetry, "~> 1.3"},
       {:opentelemetry_exporter, "~> 1.0"},
