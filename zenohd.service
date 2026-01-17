@@ -1,0 +1,20 @@
+[Unit]
+Description=Zenoh Router Daemon
+Documentation=https://zenoh.io/docs/
+After=network.target
+
+[Service]
+Type=simple
+# Adjust zenohd path if installed somewhere else
+ExecStart=%h/.cargo/bin/zenohd --listen tcp/[::]:7447 --rest-api
+# Alternative if installed system-wide: ExecStart=zenohd --listen tcp/[::]:7447 --rest-api
+Restart=on-failure
+RestartSec=5
+
+# Environment variables (optional)
+Environment=ZENOH_TASK_PRIORITY=0
+# Uncomment to persist across reboots
+# RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target
