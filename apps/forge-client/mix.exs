@@ -29,6 +29,7 @@ defmodule ForgeClient.MixProject do
   defp deps do
     [
       {:zenohex, "~> 0.7.2"},
+      {:rustler, ">= 0.0.0", optional: true},
       {:jason, "~> 1.4.4"},
       {:credo, "~> 1.7", only: [:dev], runtime: false}
     ]

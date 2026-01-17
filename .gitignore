@@ -107,3 +107,4 @@ rel/*/releases/*/cookie
 *.tar.gz
 pretrained_weights/
 thirdparty/vsk-rush-registry/
+apps/ra_mailbox/*@*/

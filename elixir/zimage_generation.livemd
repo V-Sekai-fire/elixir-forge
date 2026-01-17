@@ -1,0 +1,331 @@
+# Z-Image-Turbo Image Generation
+
+```elixir
+# Livebook setup - copy this entire cell to run
+Mix.install([
+  {:pythonx, "~> 0.4.7"},
+  {:jason, "~> 1.4.4"},
+  {:req, "~> 0.5.0"},
+  {:opentelemetry_api, "~> 1.3"},
+  {:opentelemetry, "~> 1.3"},
+  {:opentelemetry_exporter, "~> 1.0"},
+])
+
+# Configure OpenTelemetry for console logging
+Application.put_env(:opentelemetry, :span_processor, :batch)
+Application.put_env(:opentelemetry, :traces_exporter, :none)
+Application.put_env(:opentelemetry, :metrics_exporter, :none)
+Application.put_env(:opentelemetry, :logs_exporter, :none)
+
+Logger.configure(level: :info)
+```
+
+## Setup Python Environment
+
+```elixir
+# Initialize Python environment with Z-Image-Turbo dependencies
+Pythonx.uv_init("""
+[project]
+name = "zimage-generation"
+version = "0.0.0"
+requires-python = "==3.10.*"
+dependencies = [
+  "diffusers @ git+https://github.com/huggingface/diffusers",
+  "transformers",
+  "accelerate",
+  "pillow",
+  "torch",
+  "torchvision",
+  "numpy",
+  "huggingface-hub",
+  "gitpython",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu118" }
+torchvision = { index = "pytorch-cu118" }
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+""")
+
+IO.puts("✓ Python environment initialized with Z-Image-Turbo dependencies")
+```
+
+## Configuration
+
+```elixir
+# Configure the image generation parameters
+config = %{
+  prompts: ["a beautiful sunset over mountains", "a cat wearing a hat"],  # List of prompts
+  width: 1024,
+  height: 1024,
+  seed: 42,  # 0 for random
+  num_steps: 4,
+  guidance_scale: 0.0,
+  output_format: "png"
+}
+
+IO.puts("Configuration:")
+IO.inspect(config, pretty: true)
+```
+
+## Model Download (Optional)
+
+```elixir
+# Download Z-Image-Turbo models (optional - models will be downloaded automatically)
+# This cell is optional as the models will be downloaded automatically during inference
+
+# Uncomment to pre-download:
+# repo_id = "Tongyi-MAI/Z-Image-Turbo"
+# IO.puts("Downloading Z-Image-Turbo models...")
+# HuggingFaceDownloader.download_repo(repo_id, "pretrained_weights/Z-Image-Turbo", "Z-Image-Turbo", true)
+```
+
+## Z-Image-Turbo Image Generation
+
+```elixir
+# Save config to JSON for Python
+config_json = Jason.encode!(config)
+config_file = "/tmp/zimage_config_#{System.system_time(:millisecond)}.json"
+File.write!(config_file, config_json)
+
+# Run image generation
+try do
+  Pythonx.eval(~S"""
+import json
+import os
+import sys
+import logging
+from pathlib import Path
+from PIL import Image
+import torch
+from diffusers import DiffusionPipeline
+
+logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+logging.getLogger("transformers").setLevel(logging.ERROR)
+logging.getLogger("diffusers").setLevel(logging.ERROR)
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+
+from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore")
+
+_original_tqdm_init = tqdm.__init__
+def _silent_tqdm_init(self, *args, **kwargs):
+    kwargs['disable'] = True
+    return _original_tqdm_init(self, *args, **kwargs)
+tqdm.__init__ = _silent_tqdm_init
+
+cpu_count = os.cpu_count()
+half_cpu_count = cpu_count // 2
+os.environ["MKL_NUM_THREADS"] = str(half_cpu_count)
+os.environ["OMP_NUM_THREADS"] = str(half_cpu_count)
+torch.set_num_threads(half_cpu_count)
+
+MODEL_ID = "Tongyi-MAI/Z-Image-Turbo"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+dtype = torch.bfloat16 if device == "cuda" else torch.float32
+
+# Performance optimizations
+if device == "cuda":
+    torch.set_float32_matmul_precision("high")
+    torch._inductor.config.conv_1x1_as_mm = True
+    torch._inductor.config.coordinate_descent_tuning = True
+    torch._inductor.config.epilogue_fusion = False
+    torch._inductor.config.coordinate_descent_check_all_directions = True
+
+zimage_weights_dir = Path(r"../pretrained_weights/Z-Image-Turbo").resolve()
+
+if zimage_weights_dir.exists() and (zimage_weights_dir / "config.json").exists():
+    print(f"Loading from local directory: {zimage_weights_dir}")
+    pipe = DiffusionPipeline.from_pretrained(
+        str(zimage_weights_dir),
+        torch_dtype=dtype,
+        local_files_only=False
+    )
+else:
+    print(f"Loading from Hugging Face Hub: {MODEL_ID}")
+    pipe = DiffusionPipeline.from_pretrained(
+        MODEL_ID,
+        torch_dtype=dtype
+    )
+
+pipe = pipe.to(device)
+
+# Performance optimizations for 2x speed
+if device == "cuda":
+    try:
+        pipe.transformer.to(memory_format=torch.channels_last)
+        if hasattr(pipe, 'vae') and hasattr(pipe.vae, 'decode'):
+            pipe.vae.to(memory_format=torch.channels_last)
+        print("[OK] Memory format optimized (channels_last)")
+    except Exception as e:
+        print(f"[INFO] Memory format optimization: {e}")
+
+    try:
+        import triton
+        pipe.transformer = torch.compile(pipe.transformer, mode="reduce-overhead", fullgraph=False)
+        if hasattr(pipe, 'vae') and hasattr(pipe.vae, 'decode'):
+            pipe.vae.decode = torch.compile(pipe.vae.decode, mode="reduce-overhead", fullgraph=False)
+        print("[OK] torch.compile enabled (reduce-overhead mode for 2x speed boost)")
+    except ImportError:
+        print("[INFO] Triton not installed - skipping torch.compile (install triton for 2x speed boost)")
+    except Exception as e:
+        if "Triton" in str(e) or "triton" in str(e).lower():
+            print("[INFO] Triton not available - skipping torch.compile (install triton for 2x speed boost)")
+        else:
+            print(f"[INFO] torch.compile not available: {e}")
+
+print(f"[OK] Pipeline loaded on {device} with dtype {dtype}")
+""", %{})
+
+  # Process each prompt
+  results = Enum.with_index(config.prompts, 1)
+  |> Enum.map(fn {prompt, index} ->
+    IO.puts("\\n[#{index}/#{length(config.prompts)}] Generating: #{prompt}")
+
+    # Generate with loaded pipeline
+    Pythonx.eval(~S"""
+import json
+import time
+from pathlib import Path
+""" <> """
+config_file_path = r"#{String.replace(config_file, "\\", "\\\\")}"
+with open(config_file_path, 'r', encoding='utf-8') as f:
+    config = json.load(f)
+
+prompt = "#{String.replace(prompt, "\"", "\\\"")}"
+width = config.get('width', 1024)
+height = config.get('height', 1024)
+seed = config.get('seed', 0)
+num_steps = config.get('num_steps', 4)
+guidance_scale = config.get('guidance_scale', 0.0)
+output_format = config.get('output_format', 'png')
+
+output_dir = Path("output")
+output_dir.mkdir(exist_ok=True)
+
+generator = torch.Generator(device=device)
+if seed == 0:
+    seed = generator.seed()
+else:
+    generator.manual_seed(seed)
+
+print(f"[INFO] Starting generation: {prompt[:50]}...")
+print(f"[INFO] Parameters: {width}x{height}, {num_steps} steps, seed={seed}")
+print("[INFO] Generating (optimized for speed)...")
+
+with torch.inference_mode():
+    output = pipe(
+        prompt=prompt,
+        width=width,
+        height=height,
+        num_inference_steps=num_steps,
+        guidance_scale=guidance_scale,
+        generator=generator,
+    )
+
+print("[INFO] Generation complete, processing image...")
+
+image = output.images[0]
+
+tag = time.strftime("%Y%m%d_%H_%M_%S")
+export_dir = output_dir / tag
+export_dir.mkdir(exist_ok=True)
+
+output_filename = f"zimage_{tag}.{output_format}"
+output_path = export_dir / output_filename
+
+if output_format.lower() in ["jpg", "jpeg"]:
+    if image.mode == "RGBA":
+        background = Image.new("RGB", image.size, (255, 255, 255))
+        background.paste(image, mask=image.split()[3] if image.mode == "RGBA" else None)
+        image = background
+    image.save(str(output_path), "JPEG", quality=95)
+else:
+    image.save(str(output_path), "PNG")
+
+print(f"[OK] Saved image to {output_path}")
+print(f"OUTPUT_PATH:{output_path}")
+""", %{})
+
+    # Find the generated image
+    output_dir = Path.expand("output")
+    if File.exists?(output_dir) do
+      dirs = output_dir
+             |> File.ls!()
+             |> Enum.filter(&File.dir?(Path.join(output_dir, &1)))
+             |> Enum.sort(:desc)
+
+      if dirs != [] do
+        latest_dir = List.first(dirs)
+        pattern = "zimage_*.#{config.output_format}"
+        files = Path.join([output_dir, latest_dir]) |> Path.join(pattern) |> Path.wildcard()
+        if files != [] do
+          {:ok, List.first(files)}
+        else
+          {:error, "No output file found"}
+        end
+      else
+        {:error, "No output directory found"}
+      end
+    else
+      {:error, "Output directory does not exist"}
+    end
+  end)
+
+  # Display results
+  IO.puts("\\n=== Generation Results ===")
+
+  success_count = Enum.count(results, fn r -> match?({:ok, _}, r) end)
+  failed_count = length(config.prompts) - success_count
+
+  if failed_count == 0 do
+    IO.puts("✓ ALL SUCCESSFUL (#{success_count}/#{length(config.prompts)})")
+    results
+    |> Enum.filter(fn {:ok, path} -> true end)
+    |> Enum.each(fn {:ok, path} -> IO.puts("  • #{path}") end)
+  else
+    IO.puts("⚠ PARTIAL SUCCESS (#{success_count}/#{length(config.prompts)} succeeded)")
+    if success_count > 0 do
+      IO.puts("\\nSuccessful generations:")
+      results
+      |> Enum.with_index(1)
+      |> Enum.filter(fn {{:ok, _}, _} -> true end)
+      |> Enum.each(fn {{:ok, path}, idx} -> IO.puts("  [#{idx}] #{path}") end)
+    end
+    if failed_count > 0 do
+      IO.puts("\\nFailed generations:")
+      results
+      |> Enum.with_index(1)
+      |> Enum.filter(fn {{:error, _}, _} -> true end)
+      |> Enum.each(fn {{:error, reason}, idx} -> IO.puts("  [#{idx}] #{inspect(reason)}") end)
+    end
+  end
+
+rescue
+  e ->
+    IO.puts("❌ Error during generation: #{inspect(e)}")
+after
+  # Cleanup
+  File.rm(config_file)
+end
+```
+
+## Usage Instructions
+
+1. **Setup**: Run the first cell to install dependencies
+2. **Configure**: Update the config map with your prompts and parameters
+3. **Run**: Execute the generation cell to create images
+4. **Results**: Check the output directory for generated images
+
+## Notes
+
+- Requires CUDA-compatible GPU for best performance
+- Model will be downloaded automatically on first run (~6GB)
+- Uses optimized settings for fast generation (4 steps)
+- Supports multiple prompts in batch processing

@@ -3,36 +3,40 @@ defmodule ForgeClient.Dashboard do
   Service Dashboard for monitoring active Zenoh liveliness tokens in the Forge VR platform.
   """
 
+  use GenServer
+
   def start do
-    run_dashboard()
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  defp run_dashboard do
+  def init(_) do
     IO.puts("Forge VR Service Dashboard")
     IO.puts("==========================")
     IO.puts("Active VR Services:")
     IO.puts("")
 
     # Start the session and monitoring
-    {:ok, session} = Zenohex.open()
+    {:ok, session_id} = Zenohex.Session.open()
 
     # Subscribe to liveliness queries under "forge/services/**"
-    liveliness_subscriber =
-      Zenohex.Session.declare_subscriber(session, "forge/services/**", liveliness: true)
+    {:ok, subscriber_id} = Zenohex.Session.declare_subscriber(session_id, "forge/services/**", self())
 
-    # Listen for changes
-    loop(liveliness_subscriber)
+    {:ok, %{session_id: session_id, subscriber_id: subscriber_id}}
   end
 
-  defp loop(subscriber) do
-    Zenohex.Subscriber.loop(subscriber, fn sample ->
-      case sample.kind do
-        :put ->
-          IO.puts("[+] #{sample.key_expr}")
+  def handle_info(%Zenohex.Sample{} = sample, state) do
+    case sample.kind do
+      :put ->
+        IO.puts("[+] #{sample.key_expr}")
 
-        :delete ->
-          IO.puts("[-] #{sample.key_expr}")
-      end
-    end)
+      :delete ->
+        IO.puts("[-] #{sample.key_expr}")
+    end
+    {:noreply, state}
+  end
+
+  def terminate(_reason, %{session_id: session_id, subscriber_id: subscriber_id}) do
+    Zenohex.Subscriber.undeclare(subscriber_id)
+    Zenohex.Session.close(session_id)
   end
 end

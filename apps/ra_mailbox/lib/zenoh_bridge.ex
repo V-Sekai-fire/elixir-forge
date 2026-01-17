@@ -22,17 +22,14 @@ defmodule RAMailbox.ZenohBridge do
   def init(_opts) do
     Logger.info("Starting Zenoh-DETS Mailbox Bridge")
 
-    with {:ok, session} <- Zenohex.open(),
-         {:ok, queryable} <- declare_queryable(session) do
+    with {:ok, session_id} <- Zenohex.Session.open(),
+         {:ok, queryable_id} <- declare_queryable(session_id) do
       Logger.info("Zenoh queryable declared for: #{inspect(@zenoh_key_pattern)}")
-
-      # Start bridge loop
-      spawn_link(fn -> bridge_loop(session, queryable) end)
 
       {:ok,
        %{
-         session: session,
-         queryable: queryable
+         session_id: session_id,
+         queryable_id: queryable_id
        }}
     else
       {:error, reason} ->
@@ -41,32 +38,28 @@ defmodule RAMailbox.ZenohBridge do
     end
   end
 
-  defp declare_queryable(session) do
-    Zenohex.Session.declare_queryable(session, @zenoh_key_pattern)
+  defp declare_queryable(session_id) do
+    Zenohex.Session.declare_queryable(session_id, @zenoh_key_pattern, self())
   end
 
   @impl true
-  def terminate(reason, %{session: session}) do
-    Logger.warn("Zenoh-RA Bridge terminating: #{inspect(reason)}")
-    # Clean up Zenoh session
-    Zenohex.Session.close(session)
+  def terminate(reason, %{session_id: session_id, queryable_id: queryable_id}) do
+    Logger.warning("Zenoh-RA Bridge terminating: #{inspect(reason)}")
+    # Clean up Zenoh resources
+    Zenohex.Queryable.undeclare(queryable_id)
+    Zenohex.Session.close(session_id)
   end
 
-  # Bridge loop for processing Zenoh queries
-  defp bridge_loop(session, queryable) do
-    Zenohex.Queryable.loop(queryable, fn query ->
-      handle_zenoh_query(query)
-    end)
-  rescue
-    error ->
-      Logger.error("Bridge loop crashed: #{inspect(error)}")
-      Process.sleep(1000)
-      bridge_loop(session, queryable)
+  # Handle Zenoh query messages via process mailbox
+  @impl true
+  def handle_info(%Zenohex.Query{} = query, state) do
+    handle_zenoh_query(query)
+    {:noreply, state}
   end
 
   # Handle incoming Zenoh queries
   def handle_zenoh_query(query) do
-    key_expr = Zenohex.Query.key_expr(query)
+    key_expr = query.key_expr
     Logger.debug("Received Zenoh query: #{key_expr}")
 
     # Parse key_expr: "forge/mailbox/[user_id]/[operation]"
@@ -79,7 +72,7 @@ defmodule RAMailbox.ZenohBridge do
         handle_mailbox_operation(user_id, "consume", query)
 
       _other ->
-        Logger.warn("Invalid Zenoh key pattern: #{key_expr}")
+        Logger.warning("Invalid Zenoh key pattern: #{key_expr}")
         reply_error(query, "Invalid key pattern")
     end
   end
@@ -98,9 +91,9 @@ defmodule RAMailbox.ZenohBridge do
   end
 
   defp extract_payload(query) do
-    case Zenohex.Query.payload(query) do
-      {:ok, data} -> Jason.decode!(data)
-      _ -> nil
+    case query.payload do
+      nil -> nil
+      data -> Jason.decode!(data)
     end
   end
 
@@ -121,7 +114,7 @@ defmodule RAMailbox.ZenohBridge do
   end
 
   defp build_ra_command(operation, _user_id, _payload) do
-    Logger.warn("Unknown operation: #{operation}")
+    Logger.warning("Unknown operation: #{operation}")
     {:error, "Unknown or invalid operation"}
   end
 
