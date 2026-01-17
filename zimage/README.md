@@ -1,6 +1,6 @@
 # Zimage
 
-Python-based image generation service using Zenoh for peer-to-peer inference.
+Python-based AI image generation service using Zenoh for peer-to-peer inference with Z-Image-Turbo model.
 
 ## Installation
 
