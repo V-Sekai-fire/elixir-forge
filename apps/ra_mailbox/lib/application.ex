@@ -6,12 +6,12 @@ defmodule RAMailbox.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Start RA Transaction Manager (ACID transaction coordination)
+      # Start RA cluster supervisor (distributed mailbox state)
       %{
-        id: RAMailbox.TransactionManager,
-        start: {RAMailbox.TransactionManager, :start_link, []}
+        id: RAMailbox.RAClusterSupervisor,
+        start: {RAMailbox.RAClusterSupervisor, :start_link, []}
       },
-      # Start Zenoh-RA bridge (FlatBuffers over Zenoh networking)
+      # Start Zenoh-RA bridge (JSON over Zenoh networking)
       %{
         id: RAMailbox.ZenohBridge,
         start: {RAMailbox.ZenohBridge, :start_link, []}

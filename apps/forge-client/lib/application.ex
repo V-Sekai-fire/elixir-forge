@@ -5,11 +5,7 @@ defmodule ForgeClient.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      {ForgeClient.Client, []}
-    ]
-
-    opts = [strategy: :one_for_one, name: ForgeClient.Supervisor]
-    Supervisor.start_link(children, opts)
+    # No supervised processes needed - CLI handles everything
+    {:ok, self()}
   end
 end

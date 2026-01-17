@@ -1,6 +1,6 @@
-defmodule ZimageClient.Dashboard do
+defmodule ForgeClient.Dashboard do
   @moduledoc """
-  Service Dashboard for monitoring active Zenoh liveliness tokens in the Forge fabric.
+  Service Dashboard for monitoring active Zenoh liveliness tokens in the Forge VR platform.
   """
 
   def start do
@@ -8,9 +8,9 @@ defmodule ZimageClient.Dashboard do
   end
 
   defp run_dashboard do
-    IO.puts("Forge Service Dashboard")
-    IO.puts("========================")
-    IO.puts("Active AI Services:")
+    IO.puts("Forge VR Service Dashboard")
+    IO.puts("==========================")
+    IO.puts("Active VR Services:")
     IO.puts("")
 
     # Start the session and monitoring

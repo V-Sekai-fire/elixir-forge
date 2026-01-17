@@ -20,7 +20,8 @@ defmodule ForgeClient.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {ForgeClient.Application, []}
+      mod: {ForgeClient.Application, []},
+      applications: [:zenohex]  # Only needed for dashboard
     ]
   end
 
@@ -29,7 +30,6 @@ defmodule ForgeClient.MixProject do
     [
       {:zenohex, "~> 0.7.2"},
       {:jason, "~> 1.4.4"},
-      {:flatbuffer, "~> 0.3.1"},
       {:credo, "~> 1.7", only: [:dev], runtime: false}
     ]
   end
