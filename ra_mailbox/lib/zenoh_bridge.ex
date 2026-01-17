@@ -14,13 +14,13 @@ defmodule RAMailbox.ZenohBridge do
 
   @zenoh_key_pattern "forge/mailbox/*"
 
-  def start_link(ra_servers) do
-    GenServer.start_link(__MODULE__, ra_servers, name: __MODULE__)
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
   @impl true
-  def init(ra_servers) do
-    Logger.info("Starting Zenoh-RA Mailbox Bridge")
+  def init(_opts) do
+    Logger.info("Starting Zenoh-DETS Mailbox Bridge")
 
     case Zenohex.open() do
       {:ok, session} ->
@@ -29,12 +29,11 @@ defmodule RAMailbox.ZenohBridge do
             Logger.info("Zenoh queryable declared for: #{inspect(@zenoh_key_pattern)}")
 
             # Start bridge loop
-            spawn_link(fn -> bridge_loop(session, queryable, ra_servers) end)
+            spawn_link(fn -> bridge_loop(session, queryable) end)
 
             {:ok, %{
               session: session,
-              queryable: queryable,
-              ra_servers: ra_servers
+              queryable: queryable
             }}
 
           {:error, reason} ->
@@ -56,30 +55,30 @@ defmodule RAMailbox.ZenohBridge do
   end
 
   # Bridge loop for processing Zenoh queries
-  defp bridge_loop(session, queryable, ra_servers) do
+  defp bridge_loop(session, queryable) do
     Zenohex.Queryable.loop(queryable, fn query ->
-      handle_zenoh_query(query, ra_servers)
+      handle_zenoh_query(query)
     end)
   rescue
     error ->
       Logger.error("Bridge loop crashed: #{inspect(error)}")
       Process.sleep(1000)
-      bridge_loop(session, queryable, ra_servers)
+      bridge_loop(session, queryable)
   end
 
   # Handle incoming Zenoh queries
-  def handle_zenoh_query(query, ra_servers) do
+  def handle_zenoh_query(query) do
     key_expr = Zenohex.Query.key_expr(query)
     Logger.debug("Received Zenoh query: #{key_expr}")
 
     # Parse key_expr: "forge/mailbox/[user_id]/[operation]"
     case String.split(key_expr, "/", parts: 5) do
       ["forge", "mailbox", user_id, operation] ->
-        handle_mailbox_operation(user_id, operation, query, ra_servers)
+        handle_mailbox_operation(user_id, operation, query)
 
       ["forge", "mailbox", user_id] ->
         # Default operation is consume (mailbox semantics)
-        handle_mailbox_operation(user_id, "consume", query, ra_servers)
+        handle_mailbox_operation(user_id, "consume", query)
 
       _other ->
         Logger.warn("Invalid Zenoh key pattern: #{key_expr}")
@@ -88,7 +87,7 @@ defmodule RAMailbox.ZenohBridge do
   end
 
   # Handle mailbox operations
-  def handle_mailbox_operation(user_id, operation, query, ra_servers) do
+  def handle_mailbox_operation(user_id, operation, query) do
     # Extract payload if present
     payload = case Zenohex.Query.payload(query) do
       {:ok, data} -> Jason.decode!(data)
@@ -115,9 +114,9 @@ defmodule RAMailbox.ZenohBridge do
         nil
     end
 
-    # Execute RA command and reply
+    # Execute DETS command and reply
     if ra_command do
-      case submit_to_ra(ra_command, ra_servers) do
+      case submit_to_ra(ra_command, nil) do
         {:ok, result} ->
           reply_success(query, result)
         {:error, reason} ->
@@ -128,20 +127,14 @@ defmodule RAMailbox.ZenohBridge do
     end
   end
 
-  # Submit command to RA cluster
+  # Submit command to RA cluster supervisor
   def submit_to_ra(command, _ra_servers) do
-    # For demo, use the single RA server we started
-    ra_server = :mailbox_1@localhost
-
+    # Use RA cluster for linearizable mailbox operations
     try do
-      case :ra.process_command(ra_server, command, 5000) do
-        {:ok, result} ->
-          {:ok, result}
-        other ->
-          {:error, "RA command failed: #{inspect(other)}"}
-      end
+      RAMailbox.RAClusterSupervisor.process_command(command)
     catch
       error ->
+        Logger.error("RA mailbox communication error: #{inspect(error)}")
         {:error, "RA communication error: #{inspect(error)}"}
     end
   end

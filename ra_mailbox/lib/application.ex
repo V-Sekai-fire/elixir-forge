@@ -5,23 +5,16 @@ defmodule RAMailbox.Application do
 
   @impl true
   def start(_type, _args) do
-    # RA cluster configuration
-    ra_servers = [
-      {RAMailbox.RA.MailboxRA, :mailbox_1@localhost},
-      {RAMailbox.RA.MailboxRA, :mailbox_2@localhost},
-      {RAMailbox.RA.MailboxRA, :mailbox_3@localhost}
-    ]
-
     children = [
-      # Start RA cluster using RA Server
+      # Start RA cluster supervisor (distributed consensus)
       %{
-        id: RAMailbox.RA.Cluster,
-        start: {RAMailbox.RA.Cluster, :start_link, [ra_servers]}
+        id: RAMailbox.RAClusterSupervisor,
+        start: {RAMailbox.RAClusterSupervisor, :start_link, []}
       },
-      # Start Zenoh-RA bridge
+      # Start Zenoh-RA bridge (FlatBuffers over Zenoh networking)
       %{
         id: RAMailbox.ZenohBridge,
-        start: {RAMailbox.ZenohBridge, :start_link, [ra_servers]}
+        start: {RAMailbox.ZenohBridge, :start_link, []}
       }
     ]
 
