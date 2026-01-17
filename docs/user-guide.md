@@ -26,13 +26,7 @@ This platform enables you to:
    ```bash
    git clone <repository-url>
    cd forge
-   mix deps.get
-   mix compile
-   ```
-
-2. **Full setup (with database for job queuing):**
-   ```bash
-   mix ecto.setup                    # Create SQLite DB and run migrations
+   # No build step required - scripts run directly
    ```
 
 ## Core Features
@@ -44,14 +38,15 @@ The primary feature is running inference on Qwen3-VL models for image understand
 #### Basic Usage
 
 ```bash
+```bash
 # Describe an image
-mix qwen3vl path/to/image.jpg "What do you see in this image?"
+elixir elixir/qwen3vl_inference.exs path/to/image.jpg "What do you see in this image?"
 
 # With custom parameters
-mix qwen3vl image.png "Describe in detail" --max-tokens 200 --temperature 0.8
+elixir elixir/qwen3vl_inference.exs image.png "Describe in detail" --max-tokens 200 --temperature 0.8
 
 # Save output to file
-mix qwen3vl photo.jpg "Analyze this image" --output analysis.txt
+elixir elixir/qwen3vl_inference.exs photo.jpg "Analyze this image" --output analysis.txt
 ```
 
 #### Available Options
@@ -78,13 +73,13 @@ Generate photorealistic images from text prompts using the Z-Image-Turbo model.
 
 ```bash
 # Generate an image
-mix zimage "a beautiful sunset over mountains"
+elixir elixir/zimage_generation.exs "a beautiful sunset over mountains"
 
 # With custom parameters
-mix zimage "a cat wearing a hat" --width 512 --height 512 --seed 42
+elixir elixir/zimage_generation.exs "a cat wearing a hat" --width 512 --height 512 --seed 42
 
 # Multiple prompts
-mix zimage "cat" "dog" "bird" --width 512
+elixir elixir/zimage_generation.exs "cat" "dog" "bird" --width 512
 ```
 
 #### Available Options
@@ -131,17 +126,6 @@ Oban.Job.get(job.id)
 Forge uses SQLite as an embedded database for job persistence and queuing:
 
 #### Database Setup
-
-1. **Automatic setup:**
-
-   ```bash
-   mix ecto.setup  # Creates forge.db and runs migrations
-   ```
-
-2. **Check job queue status:**
-   ```bash
-   mix oban.tel    # View active jobs and workers
-   ```
 
 ## Third-Party Tools Integration
 
@@ -193,8 +177,8 @@ python run.py --input model.fbx --output rigged_model.fbx
 
 ### CLI Tasks
 
-- `mix qwen3vl` - Run vision-language inference on images
-- `mix zimage` - Generate images from text prompts
+- `elixir elixir/qwen3vl_inference.exs` - Run vision-language inference on images
+- `elixir elixir/zimage_generation.exs` - Generate images from text prompts
 - `mix ecto.setup` - Initialize SQLite database
 - `mix test` - Run test suite
 

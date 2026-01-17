@@ -1,53 +1,40 @@
 # Forge API Reference
 
-This document provides comprehensive API documentation for the Forge platform.
+This document provides comprehensive API documentation for the Forge platform scripts.
 
-## Core Modules
+## Core Scripts
 
-### LivebookNx.Qwen3VL
+### qwen3vl_inference.exs
 
-Main module for Qwen3-VL vision-language inference.
+Main script for Qwen3-VL vision-language inference.
 
-#### Functions
+#### Usage
 
-##### `do_inference(config)`
-
-Runs synchronous inference on an image.
-
-**Parameters:**
-
-- `config` (map): Configuration map with keys:
-  - `:image_path` (string, required): Path to input image
-  - `:prompt` (string, required): Text prompt for the model
-  - `:max_tokens` (integer): Maximum tokens in response (default: 4096)
-  - `:temperature` (float): Sampling temperature 0.0-1.0 (default: 0.7)
-  - `:top_p` (float): Top-p nucleus sampling (default: 0.9)
-  - `:use_4bit` (boolean): Use 4-bit quantization (default: true)
-  - `:use_flash_attention` (boolean): Enable Flash Attention 2 (default: false)
-
-**Returns:**
-
-- `{:ok, response}` - Successful inference with text response
-- `{:error, reason}` - Error with reason
-
-**Example:**
-
-```elixir
-config = %{
-  image_path: "photo.jpg",
-  prompt: "Describe this image",
-  max_tokens: 100,
-  temperature: 0.8
-}
-
-{:ok, description} = LivebookNx.Qwen3VL.do_inference(config)
+```bash
+elixir elixir/qwen3vl_inference.exs <image_path> <prompt> [options]
 ```
 
-##### `queue_inference(config)`
-
-Queues an inference job for asynchronous processing.
-
 **Parameters:**
+
+- `image_path` (string, required): Path to input image
+- `prompt` (string, required): Text prompt for the model
+
+**Options:**
+
+- `--max-tokens` (integer): Maximum tokens in response (default: 4096)
+- `--temperature` (float): Sampling temperature 0.0-1.0 (default: 0.7)
+- `--top-p` (float): Top-p nucleus sampling (default: 0.9)
+- `--use-4bit` (boolean): Use 4-bit quantization (default: true)
+- `--use-flash-attention` (boolean): Enable Flash Attention 2 (default: false)
+- `--output` (string): Output file path (default: stdout)
+
+**Examples:**
+
+```bash
+elixir elixir/qwen3vl_inference.exs photo.jpg "Describe this image"
+elixir elixir/qwen3vl_inference.exs image.png "Analyze in detail" --max-tokens 500 --temperature 0.5 --output result.txt
+elixir elixir/qwen3vl_inference.exs diagram.jpg "Explain this technical diagram" --full-precision
+```
 
 - `config` (map): Same as `do_inference/1`
 
@@ -79,38 +66,35 @@ Validates inference configuration parameters.
 - `:ok` - Valid configuration
 - `{:error, errors}` - Validation errors
 
-### LivebookNx.ZImage
+### zimage_generation.exs
 
-Main module for Z-Image-Turbo image generation.
+Main script for Z-Image-Turbo image generation.
 
-#### Functions
+#### Usage
 
-##### `generate(prompt, opts)`
-
-Generates an image from a text prompt.
+```bash
+elixir elixir/zimage_generation.exs <prompt> [options]
+```
 
 **Parameters:**
 
 - `prompt` (string, required): Text description of the image to generate
-- `opts` (keyword list): Configuration options
 
 **Options:**
 
-- `:width` (integer): Image width in pixels (64-2048, default: 1024)
-- `:height` (integer): Image height in pixels (64-2048, default: 1024)
-- `:seed` (integer): Random seed (0 for random, default: 0)
-- `:num_steps` (integer): Number of inference steps (default: 4)
-- `:guidance_scale` (float): Guidance scale (default: 0.0)
-- `:output_format` (string): Output format "png", "jpg", "jpeg" (default: "png")
+- `--width` (integer): Image width in pixels (64-2048, default: 1024)
+- `--height` (integer): Image height in pixels (64-2048, default: 1024)
+- `--seed` (integer): Random seed (0 for random, default: 0)
+- `--steps` (integer): Number of inference steps (default: 4)
+- `--guidance-scale` (float): Guidance scale (default: 0.0)
+- `--format` (string): Output format "png", "jpg", "jpeg" (default: "png")
 
-**Returns:**
+**Examples:**
 
-- `{:ok, output_path}` - Successful generation with output file path
-- `{:error, reason}` - Error with reason
-
-**Example:**
-
-```elixir
+```bash
+elixir elixir/zimage_generation.exs "a beautiful sunset over mountains"
+elixir elixir/zimage_generation.exs "a cat wearing a hat" --width 512 --height 512 --seed 42
+```
 {:ok, image_path} = LivebookNx.ZImage.generate("a beautiful sunset", width: 1024, height: 1024)
 ```
 
