@@ -1,4 +1,4 @@
-# Python virtual environment
+# Python environments and cache
 .venv/
 venv/
 __pycache__/
@@ -6,100 +6,102 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-
-# Pythonx cache
 .pythonx/
 
-# Model checkpoints
-checkpoints/
+# Elixir build artifacts
+_build/
+deps/
+mix.lock
+*.ez
+
+# ML Models and weights (large files)
+priv/pretrained_weights/
 *.pth
 *.pt
 *.ckpt
 *.safetensors
+checkpoints/
 
-# Output files
+# Output files and uploads
 output/
 uploads/
 
-# Temporary files in thirdparty (generated during processing)
-thirdparty/*_temp_*.obj
-thirdparty/*_temp_*.binvox
-thirdparty/*_temp_*.mtl
-thirdparty/*_normalized.obj
-thirdparty/*_normalized.binvox
+# Database files (SQLite)
+*.db
+*.db-*
 
-# Configuration files (generated)
+# Generated configuration files
 config.json
-# But allow checkpoints/config.json (model configs)
-!checkpoints/config.json
 
-# OS files
+# OS and editor files
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 *~
-
-# IDE files
 .vscode/
 .idea/
 *.iml
 
-# Logs
+# Logs and crash dumps
 *.log
 logs/
 lightning_logs/
-
-# Temporary files
-*.tmp
-*.temp
-
-# RigNet temporary files
-*_temp_rignet.obj
-*_temp_rignet_normalized.obj
-*_temp_rignet_normalized.binvox
-*_temp_rignet.mtl
-*_temp_rignet_rig.txt
-*_normalized.obj
-*_normalized.binvox
-*_simplified.obj
-
-# Pretrained weights (large model files)
-pretrained_weights/
-
-# Erlang crash dumps
 *.dump
 erl_crash.dump
 
-# Intermediate processing files
+# Temporary and intermediate files
+*.tmp
+*.temp
 *.npz
-# But keep example/test npz files if needed
-!thirdparty/UniRig/examples/**/*.npz
 
-# Generated output files in examples directory (FBX, OBJ, etc.)
-# Keep GLB input files, but ignore generated outputs
-thirdparty/UniRig/examples/**/*.fbx
-thirdparty/UniRig/examples/**/*.obj
-# Allow GLB files (these are input examples)
-!thirdparty/UniRig/examples/**/*.glb
+# Third-party processing temporary files
+thirdparty/*_temp_*.obj
+thirdparty/*_temp_*.binvox
+thirdparty/*_temp_*.mtl
+thirdparty/*_normalized.obj
+thirdparty/*_normalized.binvox
+thirdparty/*_temp_rignet.obj
+thirdparty/*_temp_rignet_normalized.obj
+thirdparty/*_temp_rignet_normalized.binvox
+thirdparty/*_temp_rignet.mtl
+thirdparty/*_temp_rignet_rig.txt
+thirdparty/*_simplified.obj
 
-# Blender cache
-*.blend1
-*.blend2
-
-# Meshoptimizer build artifacts
-thirdparty/blender-meshoptimizer/meshoptimizer/
-
-# Jupyter/Notebook checkpoints
-.ipynb_checkpoints/
-
-# Hugging Face cache
-.cache/
-*.cache
-
-# UniRig intermediate files
+# UniRig processing artifacts
 thirdparty/UniRig/logs/
 thirdparty/UniRig/lightning_logs/
 thirdparty/UniRig/erl_crash.dump
+thirdparty/UniRig/examples/**/*.fbx
+thirdparty/UniRig/examples/**/*.obj
+!thirdparty/UniRig/examples/**/*.npz
+!thirdparty/UniRig/examples/**/*.glb
 
-outputs/*
+# Blender and 3D processing
+*.blend1
+*.blend2
+thirdparty/blender-meshoptimizer/meshoptimizer/
+
+# Jupyter/Notebook files
+.ipynb_checkpoints/
+
+# ML and HF cache
+.cache/
+*.cache
+
+# Node.js
+node_modules/
+
+# Production and secret configs
+config/prod.exs
+config/*.local.exs
+config/*.secret.exs
+
+# Certificates (generated - webserver only)
+priv/certs/
+
+# Distillery/Mix releases
+rel/*/releases/*/cookie
+
+# Release archives
+*.tar.gz
