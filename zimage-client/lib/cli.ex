@@ -1,0 +1,114 @@
+defmodule ZimageClient.CLI do
+  @moduledoc """
+  Command-line interface for ZimageClient.
+  """
+
+  def main(args) do
+    {opts, args, _} = OptionParser.parse(args,
+      switches: [
+        width: :integer,
+        height: :integer,
+        seed: :integer,
+        num_steps: :integer,
+        guidance_scale: :float,
+        output_format: :string,
+        batch: :boolean,
+        help: :boolean
+      ],
+      aliases: [
+        w: :width,
+        h: :height,
+        s: :seed,
+        b: :batch,
+        help: :boolean
+      ]
+    )
+
+    if Keyword.get(opts, :help, false) do
+      show_help()
+      System.halt(0)
+    end
+
+    # Check if service is available
+    case ZimageClient.Client.ping() do
+      :ok ->
+        IO.puts("✓ Zimage service is available")
+
+      {:error, reason} ->
+        IO.puts("✗ Zimage service not available: #{reason}")
+        System.halt(1)
+    end
+
+    if Keyword.get(opts, :batch, false) do
+      # Batch mode - all args are prompts
+      prompts = args
+      if prompts == [] do
+        IO.puts("Error: At least one prompt required for batch mode")
+        System.halt(1)
+      end
+
+      IO.puts("Requesting batch generation of #{length(prompts)} images...")
+
+      case ZimageClient.Client.generate_batch(prompts, opts) do
+        {:ok, results} ->
+          success_count = Enum.count(results, fn {status, _, _} -> status == :ok end)
+          IO.puts("\n=== Results: #{success_count}/#{length(prompts)} successful ===")
+
+          Enum.each(results, fn
+            {:ok, prompt, path} ->
+              IO.puts("✓ '#{prompt}' -> #{path}")
+            {:error, prompt, reason} ->
+              IO.puts("✗ '#{prompt}' -> #{reason}")
+          end)
+
+        {:error, reason} ->
+          IO.puts("Batch request failed: #{reason}")
+          System.halt(1)
+      end
+
+    else
+      # Single mode
+      prompt = Enum.join(args, " ")
+      if prompt == "" do
+        IO.puts("Error: Prompt required")
+        System.halt(1)
+      end
+
+      IO.puts("Requesting image generation for: #{prompt}")
+
+      case ZimageClient.Client.generate(prompt, opts) do
+        {:ok, path} ->
+          IO.puts("✓ Image generated: #{path}")
+
+        {:error, reason} ->
+          IO.puts("✗ Generation failed: #{reason}")
+          System.halt(1)
+      end
+    end
+  end
+
+  defp show_help do
+    IO.puts("""
+    ZimageClient - Request image generation via Zenoh
+
+    USAGE:
+      zimage_client "prompt" [options]
+      zimage_client --batch "prompt1" "prompt2" [options]
+
+    OPTIONS:
+      -w, --width WIDTH          Image width (default: 1024)
+      -h, --height HEIGHT        Image height (default: 1024)
+      -s, --seed SEED            Random seed (default: 0)
+      --num-steps STEPS          Number of inference steps (default: 4)
+      --guidance-scale SCALE     Guidance scale (default: 0.0)
+      --output-format FORMAT     Output format: png, jpg, jpeg (default: png)
+      -b, --batch                Batch mode - multiple prompts
+      --help                     Show this help
+
+    EXAMPLES:
+      zimage_client "a beautiful sunset"
+      zimage_client "a cat wearing a hat" --width 512 --height 512
+      zimage_client --batch "cat" "dog" "bird" --width 256
+    """)
+  end
+end
