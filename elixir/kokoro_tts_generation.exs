@@ -273,7 +273,7 @@ Sample Rate: #{config.sample_rate} Hz
 # Add weights directory to config for Python
 base_dir = Path.expand(".")
 config_with_paths = Map.merge(config, %{
-  kokoro_weights_dir: Path.join([base_dir, "pretrained_weights", "Kokoro-82M"])
+    kokoro_weights_dir: Path.join([base_dir, "priv/pretrained_weights", "Kokoro-82M"])
 })
 
 # Save config to JSON for Python to read (use temp file to avoid conflicts)
@@ -445,7 +445,7 @@ kokoro_weights_dir = config.get('kokoro_weights_dir')
 # Fallback to default path if not in config
 if not kokoro_weights_dir:
     base_dir = Path.cwd()
-    kokoro_weights_dir = str(base_dir / "pretrained_weights" / "Kokoro-82M")
+    kokoro_weights_dir = str(base_dir / "priv" / "pretrained_weights" / "Kokoro-82M")
 
 # Ensure path is string
 kokoro_weights_dir = str(Path(kokoro_weights_dir).resolve())

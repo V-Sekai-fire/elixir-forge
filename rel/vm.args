@@ -1,0 +1,31 @@
+# VM Args for LivebookNx Release
+
+# Use the standard library path
+-elixir ansi_enabled true
+
+# Set the node name
+-sname livebook_nx
+
+# Set the cookie for distributed Erlang
+-setcookie livebook_nx_cookie
+
+# Enable SMP
+-smp enable
+
+# Set the number of schedulers
++A 4
+
+# Set the maximum number of processes
++P 1048576
+
+# Set the maximum number of atoms
++t 1048576
+
+# Set the maximum size of the process heap
++hms 67108864
+
+# Enable kernel polling
++K true
+
+# Set the async thread pool size
++A 4

@@ -17,8 +17,8 @@
 
 Mix.install([
   {:kino_bumblebee, "~> 0.2.1"},
-  {:exla, "~> 0.5.0"}
-], config: [nx: [default_backend: EXLA.Backend]])
+  {:torchx, "~> 0.5.0"}
+], config: [nx: [default_backend: Torchx.Backend]])
 
 require Logger
 
