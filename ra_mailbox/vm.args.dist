@@ -1,0 +1,23 @@
+# Erlang VM configuration for RA + Zenoh mailbox service
+# Rename to vm.args when deploying
+
+# Distributed Erlang cluster settings
+-name ra_mailbox@127.0.0.1
+-setcookie my_secret_cluster_cookie
+
+# RA configuration
+-RA_system_dir 'priv/ra'
+
+# Node type for clustering
+-kernel inet_dist_listen_min 4369
+-kernel inet_dist_listen_max 4373
+
+# Performance tuning
++P 1048576
++Q 256
+-hipe compact
++K true
++A 32
+
+# Heartbeat for distributed nodes
+-heart
