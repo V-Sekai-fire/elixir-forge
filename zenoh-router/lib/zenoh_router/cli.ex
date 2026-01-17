@@ -99,9 +99,9 @@ defmodule ZenohRouter.CLI do
         1. Using Cargo (Rust):
            cargo install zenohd
 
-        2. Using Brew (macOS):
-           brew tap eclipse-zenoh/zenoh
-           brew install zenohd
+        2. ⚰️ DEPRECATED: macOS Homebrew method broken (2026-01-16)
+           # brew tap eclipse-zenoh/zenoh
+           # brew install zenohd
 
         3. Pre-built binaries:
            See: https://zenoh.io/download/
@@ -204,6 +204,13 @@ defmodule ZenohRouter.CLI do
 
     Zenoh router enables P2P communication for distributed AI services
     in the Forge platform.
+
+    INSTALLATION:
+      1. cargo install zenohd
+      2. ⚰️ DEPRECATED: homebrew method broken (2026-01-16)
+         # brew tap eclipse-zenoh/zenoh
+         # brew install zenohd
+      3. Download pre-built: https://zenoh.io/download/
     """)
   end
 end

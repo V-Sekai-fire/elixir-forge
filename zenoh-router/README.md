@@ -16,9 +16,9 @@ ZenohRouter provides a dedicated CLI for starting, stopping, and monitoring the 
 # Rust/Cargo installation (recommended):
 cargo install zenohd
 
-# Or macOS with Homebrew:
-brew tap eclipse-zenoh/zenoh
-brew install zenohd
+# ⚰️ DEPRECATED: macOS Homebrew method broken (2026-01-16)
+# brew tap eclipse-zenoh/homebrew-eclipse-zenohd
+# brew install eclipse-zenohd
 
 # Or download pre-built binaries from https://zenoh.io/download/
 ```
