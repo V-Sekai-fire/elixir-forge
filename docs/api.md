@@ -66,16 +66,52 @@ cd zenoh-router
 - WebSocket: Enabled for browser connections
 - REST API: `http://localhost:7447/@config`
 
-## Zenoh Protocols
+## Access Patterns
 
-### Service Discovery
+### Option 1: HTTP Bridge (Universal)
+
+If zenohd has REST plugin enabled (`--rest-http-port`):
+
+```bash
+# Generate image via HTTP
+curl -X POST http://localhost:7447/apis/zimage/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "sunset over mountains",
+    "width": 1024,
+    "height": 1024,
+    "guidance_scale": 0.5
+  }'
+
+# Response: JSON with image path
+{
+  "status": "success",
+  "output_path": "/path/to/generated/image.png",
+  "metadata": {
+    "model": "z-image-turbo",
+    "inference_time": 2.3
+  }
+}
+
+# Query service status
+GET http://localhost:7447/apis/zimage/status
+
+# List available services
+GET http://localhost:7447/apis/discovery/services
+```
+
+### Option 2: Zenoh Native (High Performance)
+
+Direct Zenoh protocol access (FlatBuffers):
+
+#### Service Discovery
 - **URI Pattern**: `forge/services/[service_name]`
 - **Liveliness**: Automatic service announcement
 - **Querying**: `forge/inference/[model]`
 
-### Message Schemas
+#### Message Schemas
 
-#### Inference Request (FlatBuffers)
+**Request Schema (FlatBuffers):**
 ```fbs
 table InferenceRequest {
   prompt: string;
@@ -86,22 +122,34 @@ table InferenceRequest {
   guidance_scale: float;
   output_format: string;
 }
-```
 
-#### Inference Response (FlatBuffers)
-```fbs
-table InferenceResponse {
-  result_data: [ubyte];     // Image bytes (when implemented)
-  extensions: [ubyte];      // FlexBuffers metadata
+table FlexMetadata {
+  // GlTF2 extension fields for flexibility
+  extensions_and_extras: [ubyte];
 }
 ```
 
-#### Extension Metadata (FlexBuffers)
+**Response Schema (FlatBuffers):**
+```fbs
+table InferenceResponse {
+  // Binary image data (when available)
+  result_data: [ubyte];
+  // Flexible extensions for metadata
+  extensions: [ubyte];
+}
+```
+
+**Extension Metadata (FlexBuffers):**
 ```json
 {
   "status": "success",
   "output_path": "/path/to/generated/image.png",
-  "error": "failure description"
+  "error": "failure description",
+  "metadata": {
+    "model": "z-image-turbo",
+    "inference_time": 2.3,
+    "gpu_memory_used": 2048
+  }
 }
 ```
 

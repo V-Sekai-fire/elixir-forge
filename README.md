@@ -12,33 +12,52 @@ Distributed AI platform with peer-to-peer networking via Zenoh. Generates images
 
 ## Quick Start
 
-### 1. Install Zenoh Daemon
+### 1. Install Zenoh Daemon with HTTP Bridge
 ```bash
-# Follow official installation guide:
-# https://zenoh.io/docs/getting-started/installation/
+# Option 1: Rust + full Zenoh (with HTTP bridge)
+cargo install zenohd  # COMING SOON WITH HTTP BRIDGE
 
-# After installation, verify:
+# Option 2: System package manager (with all plugins)
+# Please see ZENOHD_SERVICE_SETUP.md for specific OS instructions
+
+# Option 3: Download pre-built binaries from zenoh.io (all plugins included)
+
+# Verify:
 zenohd --version
 ```
 
 ### 2. Launch System
 ```bash
-./boot_forge.sh  # Starts all components: router + services + dashboard
+./boot_forge.sh  # Starts zenohd service + all components
 ```
 
 ### 3. Generate Images
+If zenohd has HTTP bridge (REST plugin):
+
 ```bash
-# Simple generation
+# Direct curl to HTTP bridge (recommended)
+curl -X POST http://localhost:7447/apis/zimage/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "sunset over mountains", "width": 1024, "height": 1024}'
+
+# Or use zimage-client (Zenoh native)
 ./zimage_client "sunset over mountains"
+```
 
-# Advanced options
-./zimage_client "cyberpunk city" --width 1024 --height 1024 --guidance-scale 0.5
+Without HTTP bridge (cargo install):
 
-# Batch processing
-./zimage_client --batch "cat" "dog" "bird"
+```bash
+# Use Zenoh native client only
+./zimage_client "sunset over mountains"
+```
 
-# Monitor services
+### 4. Monitor Services
+```bash
+# Service dashboard
 ./zimage_client --dashboard
+
+# Router status
+systemctl --user status zenohd
 ```
 
 ## Architecture

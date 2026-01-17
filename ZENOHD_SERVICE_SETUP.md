@@ -1,6 +1,30 @@
 # Zenoh Router Daemon - User Service Setup
 
-This guide sets up `zenohd` as a systemd **user service** for seamless operation within your user session. This provides better reliability than background processes and integrates with system logging.
+This guide sets up `zenohd` as a systemd **user service** with optional **HTTP Bridge** for seamless operation within your user session. This provides better reliability than background processes and integrates with system logging.
+
+## Architecture Options
+
+Zenoh supports two access patterns:
+
+### Option 1: HTTP Bridge (Recommended)
+```
+Web/Curl Clients → zenohd (REST Plugin) → Zenoh network → Backend Services
+       🌐             📡                     🔧                🔬
+```
+
+- **Access:** `curl http://localhost:7447/apis/service/endpoint`
+- **Compatible with:** All HTTP clients (browsers, curl, python requests, etc.)
+- **Requirements:** zenohd with REST plugin (system install or pre-built)
+
+### Option 2: Zenoh Native (Advanced)
+```
+Zenoh Clients → zenohd (Basic) → Zenoh network → Backend Services
+       🔷            📡              🔧               🔬
+```
+
+- **Access:** `./zimage_client` (Zenoh-based CLI)
+- **Compatible with:** Zenoh client libraries (Rust, Python, Elixir, etc.)
+- **Requirements:** Basic zenohd (cargo install works)
 
 ## Prerequisites
 
@@ -23,27 +47,42 @@ cp zenohd.service ~/.config/systemd/user/
 
 **OR** edit manually to adjust paths:
 
-The provided `zenohd.service` template already uses the correct Cargo path `~/.cargo/bin/zenohd`. However, if you installed zenohd differently, you can edit the ExecStart path:
+Depending on your zenohd installation:
+
+**For Cargo zenohd (no HTTP bridge):**
+The template defaults work as-is.
+
+**For zenohd with HTTP bridge (REST plugin):**
+Enable HTTP access by uncommenting the REST line in the service:
 
 ```bash
 systemctl --user edit zenohd
 ```
 
-Then modify the [Service] section:
+Then modify the ExecStart to include REST:
 
 ```ini
 [Service]
-# For Cargo installation (automatic in template):
-ExecStart=%h/.cargo/bin/zenohd --listen tcp/[::]:7447 --rest-api
-
-# If installed system-wide:
-ExecStart=zenohd --listen tcp/[::]:7447 --rest-api
-
-# If installed to custom path:
-ExecStart=/custom/path/to/zenohd --listen tcp/[::]:7447 --rest-api
+# Uncomment this line for HTTP bridge:
+ExecStart=%h/.cargo/bin/zenohd --listen tcp/[::]:7447 --rest-http-port 7447
 ```
 
-The `%h` in systemd represents your home directory, so `%h/.cargo/bin/zenohd` expands to `$HOME/.cargo/bin/zenohd`.
+If you installed differently, adjust the paths:
+
+```ini
+# System-wide install with REST:
+ExecStart=zenohd --listen tcp/[::]:7447 --rest-http-port 7447
+
+# Custom path:
+ExecStart=/custom/path/to/zenohd --listen tcp/[::]:7447 --rest-http-port 7447
+```
+
+Apply changes and restart:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user restart zenohd
+```
 
 ### 2. Reload systemd User Daemon
 
