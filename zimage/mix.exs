@@ -28,6 +28,7 @@ defmodule Zimage.MixProject do
       {:opentelemetry_api, "~> 1.3"},
       {:opentelemetry, "~> 1.3"},
       {:opentelemetry_exporter, "~> 1.0"},
+      {:zenohex, "~> 0.7.2"}
     ]
   end
 end
