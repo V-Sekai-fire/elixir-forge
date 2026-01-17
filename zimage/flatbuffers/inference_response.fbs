@@ -1,7 +1,22 @@
-// inference_response.fbs - glTF2-style extensions
+// FlatBuffers schema for AI image generation responses
+// "Brutal/Power" transport pattern (high performance)
+
+namespace forge;
+
+// Main inference response
 table InferenceResponse {
-  result_data:[ubyte];
-  extensions:[ubyte];  // FlexBuffer map for glTF2-style extensions
+  // Response status: "success" or "error"
+  status:string;
+
+  // Image file path (success) or error message (failure)
+  result:string;
+
+  // Optional metadata about the generation
+  metadata:[string];  // Key-value pairs as strings
+
+  // Images bytes (optional - for embedded transfer)
+  image_data:[ubyte];
 }
 
+// Root structure for response
 root_type InferenceResponse;

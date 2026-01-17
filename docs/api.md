@@ -10,8 +10,8 @@ Location: `zimage/`
 Technology: Python + Hugging Face Diffusers + Zenoh
 
 **Service Interface:**
-- **Transport**: Zenoh queryable at "zimage/generate/**"
-- **Data Format**: FlatBuffers with FlexBuffers extensions
+- **Transport**: HTTP/JSON via Zenoh bridge at `http://localhost:7447/apis/zimage/generate`
+- **Data Format**: Standard JSON
 - **Response**: Image paths in output directory with timestamps
 
 **Local Development:**
@@ -19,14 +19,15 @@ Technology: Python + Hugging Face Diffusers + Zenoh
 # Start service
 cd zimage && uv run python inference_service.py
 
-# Import inference function
+# Import inference function for testing
 from inference_service import process_inference
 result = process_inference("sunset mountain", 1024, 1024, 42, 4, 0.0, "png")
 ```
 
 **Zenoh Integration:**
-- Liveliness token: "forge/services/qwen3vl"
-- Connection: Auto-discovers via zenoh-router
+- **HTTP Bridge**: Accessible via `apis/zimage/**` endpoints
+- **Liveliness Token**: "forge/services/zimage" (auto-announced)
+- **Connection**: Bridges HTTP requests to internal Zenoh network
 
 ### zimage-client (Elixir CLI Tools)
 
@@ -66,92 +67,130 @@ cd zenoh-router
 - WebSocket: Enabled for browser connections
 - REST API: `http://localhost:7447/@config`
 
-## Access Patterns
+## API Access
 
-### Option 1: HTTP Bridge (Universal)
+The primary access method is via the **Zenoh HTTP Bridge**, which translates between HTTP requests and Zenoh messages. This enables universal access using any HTTP client.
 
-If zenohd has REST plugin enabled (`--rest-http-port`):
+### HTTP Bridge Endpoints
 
+#### Image Generation
 ```bash
-# Generate image via HTTP
+# Generate image via HTTP POST
 curl -X POST http://localhost:7447/apis/zimage/generate \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "sunset over mountains",
     "width": 1024,
     "height": 1024,
-    "guidance_scale": 0.5
+    "guidance_scale": 0.5,
+    "num_steps": 4,
+    "output_format": "png"
   }'
-
-# Response: JSON with image path
-{
-  "status": "success",
-  "output_path": "/path/to/generated/image.png",
-  "metadata": {
-    "model": "z-image-turbo",
-    "inference_time": 2.3
-  }
-}
-
-# Query service status
-GET http://localhost:7447/apis/zimage/status
-
-# List available services
-GET http://localhost:7447/apis/discovery/services
 ```
 
-### Option 2: Zenoh Native (High Performance)
-
-Direct Zenoh protocol access (FlatBuffers):
-
-#### Service Discovery
-- **URI Pattern**: `forge/services/[service_name]`
-- **Liveliness**: Automatic service announcement
-- **Querying**: `forge/inference/[model]`
-
-#### Message Schemas
-
-**Request Schema (FlatBuffers):**
-```fbs
-table InferenceRequest {
-  prompt: string;
-  width: int32 = 1024;
-  height: int32 = 1024;
-  seed: int32;
-  num_steps: int32 = 4;
-  guidance_scale: float;
-  output_format: string;
-}
-
-table FlexMetadata {
-  // GlTF2 extension fields for flexibility
-  extensions_and_extras: [ubyte];
-}
-```
-
-**Response Schema (FlatBuffers):**
-```fbs
-table InferenceResponse {
-  // Binary image data (when available)
-  result_data: [ubyte];
-  // Flexible extensions for metadata
-  extensions: [ubyte];
-}
-```
-
-**Extension Metadata (FlexBuffers):**
+**Response:**
 ```json
 {
   "status": "success",
-  "output_path": "/path/to/generated/image.png",
-  "error": "failure description",
+  "output_path": "/tmp/generated/image_001.png",
   "metadata": {
     "model": "z-image-turbo",
     "inference_time": 2.3,
+    "width": 1024,
+    "height": 1024
+  }
+}
+```
+
+#### Batch Generation
+```bash
+curl -X POST http://localhost:7447/apis/zimage/batch \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"prompt": "cat", "width": 512, "height": 512},
+    {"prompt": "dog", "width": 512, "height": 512}
+  ]'
+```
+
+#### Service Status
+```bash
+# Get zimage service status
+curl -X GET http://localhost:7447/apis/zimage/status
+```
+
+**Response Example:**
+```json
+{
+  "service": "zimage",
+  "status": "active",
+  "version": "1.0.0",
+  "uptime": 1234,
+  "active_models": ["z-image-turbo"],
+  "gpu_available": true
+}
+```
+
+### Alternative: Zenoh Native (CLI)
+
+For advanced usage, use the native Zenoh client:
+
+```bash
+# Generate with CLI (connects directly to Zenoh)
+./zimage_client "sunset over mountains" --width 1024
+
+# Service dashboard
+./zimage_client --dashboard
+
+# Batch processing
+./zimage_client --batch "cat" "dog" "bird" --width 512
+```
+
+### Payload Format
+
+All JSON payloads use this structure:
+
+**Request:**
+```json
+{
+  "prompt": "text description (required)",
+  "width": 1024,
+  "height": 1024,
+  "num_steps": 4,
+  "guidance_scale": 0.5,
+  "output_format": "png|jpg|jpeg",
+  "seed": "(optional integer)"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success|error",
+  "output_path": "/path/to/image (if success)",
+  "error": "error message (if failed)",
+  "metadata": {
+    "model": "model_name",
+    "inference_time": 2.3,
+    "width": 1024,
+    "height": 1024,
     "gpu_memory_used": 2048
   }
 }
 ```
+
+### Compression
+
+**HTTP compression is recommended and enabled.** Use gzip compression for large payloads:
+
+```bash
+curl -X POST http://localhost:7447/apis/zimage/generate \
+  -H "Content-Type: application/json" \
+  -H "Accept-Encoding: gzip,deflate" \
+  --compressed \
+  -d '{"prompt": "...very long prompt..."}'
+```
+
+This is particularly beneficial for complex AI prompts and batch operations.
 
 ## Error Codes
 
@@ -202,10 +241,10 @@ plugins:
 - **Speed**: ~2-5 seconds per image
 
 ### Network Transport
-- **Protocol**: Zenoh with automatic routing
-- **Serialization**: FlatBuffers (zero-copy)
-- **Compression**: Built-in Zenoh optimization
-- **Latency**: Sub-millisecond local, <10ms LAN
+- **Protocol**: Zenoh HTTP Bridge (REST API)
+- **Serialization**: JSON with optional gzip compression
+- **Compression**: HTTP gzip by default, recommended for AI payloads
+- **Latency**: ~1-5ms local HTTP overhead on Zenoh network
 
 ## Testing
 

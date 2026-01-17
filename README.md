@@ -32,23 +32,31 @@ zenohd --version
 ```
 
 ### 3. Generate Images
-If zenohd has HTTP bridge (REST plugin):
+Forgbe supports both **Simple** (HTTP/JSON) and **Brutal** (Zenoh/FlatBuffers) patterns:
 
+**Simple Pattern (HTTP Bridge):**
 ```bash
-# Direct curl to HTTP bridge (recommended)
+# Universal JSON API via HTTP
 curl -X POST http://localhost:7447/apis/zimage/generate \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "sunset over mountains", "width": 1024, "height": 1024}'
+  -d '{"prompt": "sunset over mountains", "width": 1024}'
 
-# Or use zimage-client (Zenoh native)
-./zimage_client "sunset over mountains"
+# Batch generation
+curl -X POST http://localhost:7447/apis/zimage/batch \
+  -H "Content-Type: application/json" \
+  -d '[{"prompt": "cat"}, {"prompt": "dog"}]'
 ```
 
-Without HTTP bridge (cargo install):
-
+**Brutal Pattern (Zenoh Native):**
 ```bash
-# Use Zenoh native client only
+# High-performance FlatBuffers over Zenoh
 ./zimage_client "sunset over mountains"
+
+# Advanced options
+./zimage_client "cyberpunk city" --width 1024 --guidance-scale 0.5
+
+# Service monitoring
+./zimage_client --dashboard
 ```
 
 ### 4. Monitor Services

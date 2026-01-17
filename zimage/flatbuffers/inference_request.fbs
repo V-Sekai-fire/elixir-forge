@@ -1,8 +1,27 @@
-// inference_request.fbs
+// FlatBuffers schema for AI image generation requests
+// "Brutal/Power" transport pattern (high performance)
+
+namespace forge;
+
+// Main inference request
 table InferenceRequest {
-  image_data:[ubyte];
+  // Required prompt describing the image
   prompt:string;
-  model:string;
+
+  // Dimensions (defaults provided)
+  width:int32 = 1024;
+  height:int32 = 1024;
+
+  // Inference control
+  num_steps:int32 = 4;
+  guidance_scale:double = 0.5;
+
+  // Optional random seed
+  seed:int32 = 0;
+
+  // Output format
+  output_format:string = "png";
 }
 
+// Root structure for request
 root_type InferenceRequest;
