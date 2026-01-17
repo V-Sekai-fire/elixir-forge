@@ -1,4 +1,4 @@
-defmodule ZimageClient.Application do
+defmodule ForgeClient.Application do
   @moduledoc false
 
   use Application
@@ -6,10 +6,10 @@ defmodule ZimageClient.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {ZimageClient.Client, []}
+      {ForgeClient.Client, []}
     ]
 
-    opts = [strategy: :one_for_one, name: ZimageClient.Supervisor]
+    opts = [strategy: :one_for_one, name: ForgeClient.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

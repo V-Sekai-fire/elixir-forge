@@ -7,7 +7,7 @@ Distributed AI platform with peer-to-peer networking via Zenoh. Generates images
 ## Components
 
 - **zimage/**: Python AI service (Hugging Face diffusers + torch)
-- **zimage-client/**: Elixir CLI tools + live service dashboard
+- **forge-client/**: Elixir CLI tools + live service dashboard
 - **zenohd.service**: Systemd user service for Zenoh router daemon
 
 ## Quick Start
@@ -32,19 +32,19 @@ Forge uses FlatBuffers over Zenoh native protocol for high-performance communica
 **Image Generation:**
 ```bash
 # Generate AI images via FlatBuffers/Zenoh
-./zimage_client "sunset over mountains"
+./forge_client "sunset over mountains"
 
 # Advanced options
-./zimage_client "cyberpunk city" --width 1024 --guidance-scale 0.5 --num-steps 8
+./forge_client "cyberpunk city" --width 1024 --guidance-scale 0.5 --num-steps 8
 
 # Batch processing
-./zimage_client --batch "cat in meadow" "dog by river" "bird in sky" --width 512
+./forge_client --batch "cat in meadow" "dog by river" "bird in sky" --width 512
 ```
 
 **Service Monitoring:**
 ```bash
 # Real-time service dashboard
-./zimage_client --dashboard
+./forge_client --dashboard
 ```
 
 ### 4. Monitor Services
@@ -59,9 +59,9 @@ journalctl --user -u zenohd --lines=10
 ## Architecture
 
 ```
-[zimage-client] ←→ [zenohd router] ←→ [zimage service]
-  CLI/Dash           P2P Network          AI Generation
-   (Elixir)            (systemd)             (Python)
+[forge-client] ←→ [zenohd router] ←→ [zimage service]
+  CLI/Dash         P2P Network          AI Generation
+   (Elixir)           (systemd)             (Python)
 ```
 
 - **Peer-to-Peer**: Services discover each other automatically
@@ -81,13 +81,13 @@ cd forge
 cd zimage && uv sync
 
 # Setup Elixir CLI tools
-cd ../zimage-client && mix deps.get && mix escript.build
+cd ../forge-client && mix deps.get && mix escript.build
 ```
 
 ### Runtime
 - **Zenoh Router**: `systemctl --user start zenohd`
 - **AI Service**: `cd zimage && uv run python inference_service.py`
-- **Client Tools**: `cd zimage-client && ./zimage_client [command]`
+- **Client Tools**: `cd forge-client && ./forge_client [command]`
 
 ### Zenohd Service Setup
 For detailed zenohd systemd user service setup, see **ZENOHD_SERVICE_SETUP.md**

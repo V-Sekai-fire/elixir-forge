@@ -1,9 +1,9 @@
-defmodule ZimageClient.MixProject do
+defmodule ForgeClient.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :zimage_client,
+      app: :forge_client,
       version: "0.1.0",
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
@@ -13,14 +13,14 @@ defmodule ZimageClient.MixProject do
   end
 
   def escript do
-    [main_module: ZimageClient.CLI]
+    [main_module: ForgeClient.CLI]
   end
 
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger],
-      mod: {ZimageClient.Application, []}
+      mod: {ForgeClient.Application, []}
     ]
   end
 
