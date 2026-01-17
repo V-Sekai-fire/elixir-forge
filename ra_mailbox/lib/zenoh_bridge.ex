@@ -127,15 +127,38 @@ defmodule RAMailbox.ZenohBridge do
     end
   end
 
-  # Submit command to RA cluster supervisor
+  # Submit command to RA Transaction Manager (ACID coordination)
   def submit_to_ra(command, _ra_servers) do
-    # Use RA cluster for linearizable mailbox operations
+    # Use TransactionManager for ACID mailbox operations
     try do
-      RAMailbox.RAClusterSupervisor.process_command(command)
+      process_transaction_command(command)
     catch
       error ->
-        Logger.error("RA mailbox communication error: #{inspect(error)}")
-        {:error, "RA communication error: #{inspect(error)}"}
+        Logger.error("RA transaction communication error: #{inspect(error)}")
+        {:error, "RA transaction communication error: #{inspect(error)}"}
+    end
+  end
+
+  # Process mailbox commands through TransactionManager with ACID guarantees
+  defp process_transaction_command({:put, user_id, message}) do
+    case RAMailbox.TransactionManager.put_message("mailbox_node", user_id, message) do
+      {:ok, :message_sent} -> {:ok, :ok}
+      error -> error
+    end
+  end
+
+  defp process_transaction_command({:consume, user_id}) do
+    RAMailbox.TransactionManager.consume_message("mailbox_node", user_id)
+  end
+
+  defp process_transaction_command({:peek, user_id}) do
+    RAMailbox.TransactionManager.peek_message("mailbox_node", user_id)
+  end
+
+  defp process_transaction_command({:count, user_id}) do
+    case RAMailbox.TransactionManager.message_count("mailbox_node", user_id) do
+      {:ok, count} -> {:ok, count}
+      error -> error
     end
   end
 
