@@ -8,20 +8,16 @@ Distributed AI platform with peer-to-peer networking via Zenoh. Generates images
 
 - **zimage/**: Python AI service (Hugging Face diffusers + torch)
 - **zimage-client/**: Elixir CLI tools + live service dashboard
-- **zenoh-router/**: Dedicated Zenoh router daemon management
+- **zenohd.service**: Systemd user service for Zenoh router daemon
 
 ## Quick Start
 
 ### 1. Install Zenoh Daemon
 ```bash
-# Cargo installation (requires Rust)
-cargo install zenohd
+# Follow official installation guide:
+# https://zenoh.io/docs/getting-started/installation/
 
-# Or use pre-built binaries
-curl -L https://github.com/eclipse-zenoh/zenoh/releases/download/1.2.2/zenohd-1.2.2-x86_64-unknown-linux-gnu.tar.gz -o zenohd.tar.gz
-tar -xzf zenohd.tar.gz && sudo cp zenohd /usr/local/bin/
-
-# Verify installation
+# After installation, verify:
 zenohd --version
 ```
 
@@ -48,9 +44,9 @@ zenohd --version
 ## Architecture
 
 ```
-[zimage-client] ←→ [zenoh-router] ←→ [zimage service]
+[zimage-client] ←→ [zenohd router] ←→ [zimage service]
   CLI/Dash           P2P Network          AI Generation
-   (Elixir)            (Zenoh)              (Python)
+   (Elixir)            (systemd)             (Python)
 ```
 
 - **Peer-to-Peer**: Services discover each other automatically
@@ -73,9 +69,12 @@ cd ../zimage-client && mix deps.get && mix escript.build
 ```
 
 ### Runtime
-- **Zenoh Router**: `./zenoh-router/zenoh_router start`
+- **Zenoh Router**: `systemctl --user start zenohd`
 - **AI Service**: `cd zimage && uv run python inference_service.py`
 - **Client Tools**: `cd zimage-client && ./zimage_client [command]`
+
+### Zenohd Service Setup
+For detailed zenohd systemd user service setup, see **ZENOHD_SERVICE_SETUP.md**
 
 ## Documentation
 
