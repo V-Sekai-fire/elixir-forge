@@ -1,11 +1,13 @@
 # Contributing to Forge
 
 ## Overview
+
 Forge is a distributed AI platform using Zenoh for peer-to-peer communication and Deep Learning inference, powered by Z-Image-Turbo model integration. This guide covers development setup, coding standards, and contribution guidelines.
 
 ## Development Setup
 
 ### Prerequisites
+
 - Python 3.11+
 - Elixir 1.14+
 - uv (Python package manager) or pip
@@ -16,12 +18,14 @@ Forge is a distributed AI platform using Zenoh for peer-to-peer communication an
 ### Environment Setup
 
 #### Python (zimage service)
+
 ```bash
 cd zimage
 uv sync  # Install dependencies
 ```
 
 #### Elixir (zimage-client)
+
 ```bash
 cd zimage-client
 mix deps.get  # Install Elixir dependencies
@@ -29,6 +33,7 @@ mix escript.build  # Build CLI executable
 ```
 
 #### Zenoh Router (for E2E testing)
+
 ```bash
 # Install zenoh router
 cargo install eclipse-zenohd  # Requires Rust
@@ -47,11 +52,13 @@ zenohd
 - **Zenoh Integration**: Cross-language P2P communication protocols
 
 ### 2. Make Changes
+
 - Feature development on topic branches
 - Keep commits focused and well-described
 - Test locally before pushing
 
 ### 3. Testing
+
 ```bash
 # Build and test all components
 cd zimage && uv run python inference_service.py  # Demo run
@@ -61,6 +68,7 @@ go test  # If adding Go components
 ```
 
 ### 4. Submit PR
+
 - Include comprehensive description
 - Reference related issues
 - Add/update tests
@@ -68,11 +76,13 @@ go test  # If adding Go components
 ## Architecture Guidelines
 
 ### Zenoh Integration
+
 - Use URI-based service discovery (`forge/services/**`, `zimage/generate/**`)
 - Implement liveliness tokens for service announcement
 - Follow request-response patterns with FlatBuffers/FlexBuffers serialization
 
 ### Python Development
+
 - **Dependencies**: Committed pyproject.toml with uv lockfiles
 - **Imports**: Standard library first, then third-party, then local
 - **Async/Await**: Use for all I/O operations in zenoh communication
@@ -80,6 +90,7 @@ go test  # If adding Go components
 - **Logging**: Use Python logging module
 
 ### Elixir Development
+
 - **Naming**: snake_case for functions/files, PascalCase for modules
 - **OTP**: Leverage GenServer, Supervisor patterns
 - **Documentation**: Use @doc/@moduledoc
@@ -89,6 +100,7 @@ go test  # If adding Go components
 ## Code Quality Standards
 
 ### Linting & Formatting
+
 ```bash
 # Python
 uv run flake8 zimage/  # Style checking
@@ -100,12 +112,14 @@ mix credo   # Code analysis
 ```
 
 ### Testing
+
 - **Unit Tests**: Cover all module functions
 - **Integration Tests**: E2E flows via zenoh network
 - **Performance Tests**: Measure latency for AI inference
 - **Network Tests**: Zenoh discovery and message routing
 
 ### Documentation
+
 - **Code**: Use docstrings/doc comments
 - **Architecture**: Update docs/ for major changes
 - **APIs**: Document FlatBuffers schemas and URI patterns
@@ -113,6 +127,7 @@ mix credo   # Code analysis
 ## Zenoh-Specific Guidelines
 
 ### Message Serialization
+
 ```python
 # Use FlatBuffers for request/response structure
 # Use FlexBuffers for variable metadata
@@ -120,6 +135,7 @@ mix credo   # Code analysis
 ```
 
 ### Service Discovery
+
 ```python
 # Liveliness tokens for service announcement
 # Queryable endpoints for request handling
@@ -127,6 +143,7 @@ mix credo   # Code analysis
 ```
 
 ### Error Handling
+
 - Zenoh network failures should be recoverable
 - Failed AI inference should return structured error responses
 - Graceful degradation when services unavailable
@@ -134,12 +151,14 @@ mix credo   # Code analysis
 ## Performance Considerations
 
 ### AI Inference
+
 - Local model caching in `pretrained_weights/`
 - GPU optimization (torch.compile, memory format)
 - Batch processing for multiple requests
 - Memory management with PyTorch garbage collection
 
 ### Network Communication
+
 - Minimal serialization overhead with FlatBuffers
 - Connection pooling in Zenoh sessions
 - Backpressure handling for high-throughput scenarios
@@ -147,11 +166,13 @@ mix credo   # Code analysis
 ## Git Workflow
 
 ### Branch Naming
+
 - `feature/zenoh-optimization`
 - `fix/client-serialization`
 - `docs/api-update`
 
 ### Commit Messages
+
 ```
 type(scope): description
 
@@ -160,6 +181,7 @@ Scope: component name (zimage, client, zenoh)
 ```
 
 ### Pull Request Template
+
 - **Description**: What changes and why
 - **Testing**: How verified (unit, integration, e2e)
 - **Performance Impact**: Any latency/throughput changes
@@ -168,15 +190,18 @@ Scope: component name (zimage, client, zenoh)
 ## Getting Help
 
 ### Resources
+
 - **Zenoh Documentation**: https://zenoh.io/
 - **FlatBuffers Guide**: https://google.github.io/flatbuffers/
 - **Hugging Face Diffusers**: https://huggingface.co/docs/diffusers
 - **Elixir Guides**: https://elixir-lang.org/getting-started
 
 ### Community
+
 - Issues on GitHub for bug reports/feature requests
 - Discussion forum for design/architecture questions
 - Code reviews required for all PRs
 
 ## License & Contributions
+
 By contributing, you agree that your contributions will be licensed under the same MIT license as the project. Contributions are welcome and appreciated!
