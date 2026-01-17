@@ -1,77 +1,51 @@
 # Zimage
 
-A standalone Elixir application for Z-Image-Turbo image generation with Zenoh integration.
+Python-based image generation service using Zenoh for peer-to-peer inference.
 
 ## Installation
 
 ```bash
-cd zimage
-mix deps.get
-mix compile
+pip install zenoh aiohttp numpy torch  # depending on model requirements
+pip install flatbuffers
 ```
 
-## Usage
+## Setup FlatBuffers
 
-### Direct API
-
-```elixir
-# Generate a single image
-{:ok, path} = Zimage.generate("a beautiful sunset")
-
-# Generate with custom options
-{:ok, path} = Zimage.generate("a cat wearing a hat", width: 512, height: 512, seed: 42)
-
-# Generate multiple images
-{:ok, paths} = Zimage.generate_batch(["cat", "dog", "bird"])
-```
-
-### Zenoh Service
-
-The application runs as a Zenoh service that accepts generation requests:
+Install the FlatBuffers compiler (flatc), then generate Python modules:
 
 ```bash
-# Start the service
-mix run
+# Install flatc (if not already)
+# On Ubuntu: apt install flatbuffers-compiler
+# On macOS: brew install flatbuffers
 
-# The service will be available at 'zimage/generate'
+cd zimage
+flatc --python flatbuffers/inference_request.fbs flatbuffers/inference_response.fbs
+
+# This generates flatbuffers/inference_request.py and flatbuffers/inference_response.py
 ```
 
-#### Requesting Generation via Zenoh
+Then uncomment the imports in `inference_service.py`:
 
-From another Elixir node or application:
-
-```elixir
-# Open Zenoh session
-{:ok, session} = Zenohex.open()
-
-# Query for image generation
-{:ok, reply} = Zenohex.Session.get(session, "zimage/generate", %{
-  "prompt" => "a beautiful landscape",
-  "width" => "1024",
-  "height" => "1024"
-})
-
-# Process the reply
-case reply do
-  %{"status" => "success", "output_path" => path} ->
-    IO.puts("Image generated: #{path}")
-  %{"status" => "error", "reason" => reason} ->
-    IO.puts("Generation failed: #{reason}")
-end
+```python
+from flatbuffers import inference_request, inference_response
 ```
 
 ## Running
 
 ```bash
-# Start the Zenoh-enabled application
-mix run
-
-# Or run interactively
-iex -S mix
+cd zimage
+python inference_service.py
 ```
 
-## Dependencies
+## FlatBuffers Schemas
 
-- Pythonx for Python interop
-- Zenohex for Zenoh protocol
-- Diffusers, Transformers, etc. via UV
+The service uses FlatBuffers for efficient serialization:
+- `flatbuffers/inference_request.fbs`: Request format
+- `flatbuffers/inference_response.fbs`: Response format
+
+## Architecture
+
+- Connects via Zenoh for P2P discovery
+- Provides queryable endpoint at "forge/inference/qwen"
+- Uses liveliness tokens for service announcement
+- Integrates with AI models (placeholder in code)
