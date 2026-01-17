@@ -39,19 +39,35 @@ async def main():
                 # Process inference (placeholder)
                 output_path = await process_inference(prompt, width, height, seed, num_steps, guidance_scale, output_format)
 
-                # Reply with JSON as expected by client
-                response = {
-                    "status": "success",
-                    "output_path": output_path
-                }
-            else:
-                response = {
-                    "status": "error",
-                    "reason": "Invalid request format"
-                }
+                # Serialize response FlatBuffer
+                # result_data: generated image bytes (or empty if using path approach)
+                # metadata: JSON with status and output_path
+                import flatbuffers_builder as fb  # Placeholder
+                builder = fb.Builder(1024)
+                fb.InferenceResponse.Start(builder)
+                result_data_vec = builder.CreateByteVector(b"")  # Empty for now, send image bytes here later
+                metadata_str = '{"status": "success", "output_path": "' + output_path + '"}'
+                metadata = builder.CreateString(metadata_str)
+                fb.InferenceResponse.AddResultData(builder, result_data_vec)
+                fb.InferenceResponse.AddMetadata(builder, metadata)
+                response_fb = fb.InferenceResponse.End(builder)
+                builder.Finish(response_fb)
+                encoded = builder.Output()
 
-            # Reply
-            await query.reply(json.dumps(response))
+                # Reply with FlatBuffer
+                await query.reply(encoded)
+            else:
+                # Error response
+                builder = fb.Builder(512)
+                fb.InferenceResponse.Start(builder)
+                result_data_vec = builder.CreateByteVector(b"")
+                metadata = builder.CreateString('{"status": "error", "reason": "Invalid request format"}')
+                fb.InferenceResponse.AddResultData(builder, result_data_vec)
+                fb.InferenceResponse.AddMetadata(builder, metadata)
+                response_fb = fb.InferenceResponse.End(builder)
+                builder.Finish(response_fb)
+                encoded = builder.Output()
+                await query.reply(encoded)
 
 async def process_inference(prompt, width, height, seed, num_steps, guidance_scale, output_format):
     # Placeholder: integrate with actual AI model here
