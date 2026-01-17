@@ -56,7 +56,7 @@ New to Forge? Start here:
 ### Platform Components
 
 - **zimage/**: Python AI service with Hugging Face diffusers
-- **zimage-client/**: Elixir CLI tools and service monitoring
+- **forge-client/**: Elixir CLI tools and service monitoring
 - **zenoh-router/**: Dedicated Zenoh router daemon management
 
 ### Networking Features
@@ -68,7 +68,7 @@ New to Forge? Start here:
 ## Architecture
 
 ```
-[zimage-client] ←→ [zenoh-router] ←→ [zimage service]
+[forge-client] ←→ [zenoh-router] ←→ [zimage service]
   Live Dashboard      P2P Network        AI Generation
    (Elixir CLI)         (Zenoh)            (Python)
        ↓                    |

@@ -28,14 +28,14 @@ cd zimage && uv run python inference_service.py
 - **Query Key**: `forge/inference/zimage`
 - **Protocol**: FlatBuffers for efficient binary serialization
 
-### zimage-client (Elixir CLI Tools)
+### forge-client (Elixir CLI Tools)
 
-Location: `zimage-client/`
+Location: `forge-client/`
 Technology: Elixir with Zenoh connectivity
 
 **CLI Interface:**
 ```bash
-cd zimage-client
+cd forge-client
 ./zimage_client "generate this" --width 1024 --guidance-scale 0.5
 ./zimage_client --dashboard  # Real-time monitoring
 ./zimage_client --router     # Start zenohd
@@ -81,7 +81,7 @@ The primary interface uses FlatBuffers binary serialization over Zenoh's peer-to
 ```
 
 **CLI Available on all CLI implementations:**
-- ✅ zimage-client (Elixir with Zenoh client)
+- ✅ forge-client (Elixir with Zenoh client)
 - ✅ Custom Zenoh clients (Python, C++, Rust, etc.)
 
 #### Batch Processing
@@ -190,7 +190,7 @@ ws:
 cd zimage && uv run pytest
 
 # Elixir
-cd zimage-client && mix test
+cd forge-client && mix test
 cd zenoh-router && mix test
 ```
 

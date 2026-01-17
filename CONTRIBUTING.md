@@ -24,10 +24,10 @@ cd zimage
 uv sync  # Install dependencies
 ```
 
-#### Elixir (zimage-client)
+#### Elixir (forge-client)
 
 ```bash
-cd zimage-client
+cd forge-client
 mix deps.get  # Install Elixir dependencies
 mix escript.build  # Build CLI executable
 ```
@@ -47,7 +47,7 @@ zenohd
 ### 1. Choose Your Component
 
 - **zimage/**: Python service for AI inference (Hugging Face diffusers, FlatBuffers)
-- **zimage-client/**: Elixir CLI and dashboard for service interaction
+- **forge-client/**: Elixir CLI and dashboard for service interaction
 - **Zenoh Integration**: Cross-language P2P communication protocols
 
 ### 2. Make Changes
@@ -61,7 +61,7 @@ zenohd
 ```bash
 # Build and test all components
 cd zimage && uv run python inference_service.py  # Demo run
-cd ../zimage-client && mix test && mix escript.build
+cd ../forge-client && mix test && mix escript.build
 go test  # If adding Go components
 ./test_e2e.sh  # Integration test
 ```

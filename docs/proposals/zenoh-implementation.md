@@ -82,7 +82,7 @@ One of the biggest issues with the original Forge was that Wide Area Networks (W
 This specification has been fully implemented in the Forge project:
 
 - **zimage/**: Python AI service with Zenoh connectivity and Z-Image-Turbo generation
-- **zimage-client/**: Elixir CLI with service dashboard for live system monitoring
+- **forge-client/**: Elixir CLI with service dashboard for live system monitoring
 - **zenoh-router/**: Dedicated Elixir application for Zenoh daemon management
 
 The system operates as a complete distributed AI platform with peer-to-peer networking, automatic service discovery, and binary transport protocols.

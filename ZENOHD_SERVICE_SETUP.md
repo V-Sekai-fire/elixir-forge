@@ -179,7 +179,7 @@ systemctl --user start zenohd
 
 # Start Forge services
 cd zimage && uv run python inference_service.py &
-cd ../zimage-client && ./zimage_client --dashboard &
+cd ../forge-client && ./zimage_client --dashboard &
 
 # Stop all later
 systemctl --user stop zenohd
