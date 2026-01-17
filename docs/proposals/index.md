@@ -5,7 +5,7 @@ This directory contains architectural proposals for the Forge distributed AI pla
 ## Network Architecture Proposals
 
 - **[Zenoh Implementation](zenoh-implementation.md)** - Complete deployment guide for switching from Malamute/ZeroMQ to Zenoh distributed networking
-- **[Mnesia Mailbox Service](mnesia-mailbox-service.md)** - Advanced message broker pattern using Elixir Mnesia + Zenoh for reliable, distributed mailboxes
+- **[RA Mailbox Service](mnesia-mailbox-service.md)** - Advanced message broker pattern using Erlang RA + Zenoh for linearizable, distributed mailboxes
 - **[Tools Research](tools_research.md)** - Investigation of performance between ZeroMQ and Zenoh for Forge's networking needs
 
 ## Original Database Latency Proposals
