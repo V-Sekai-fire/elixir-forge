@@ -13,6 +13,7 @@ defmodule ZimageClient.CLI do
         guidance_scale: :float,
         output_format: :string,
         batch: :boolean,
+        dashboard: :boolean,
         help: :boolean
       ],
       aliases: [
@@ -20,12 +21,18 @@ defmodule ZimageClient.CLI do
         h: :height,
         s: :seed,
         b: :batch,
+        d: :dashboard,
         help: :boolean
       ]
     )
 
     if Keyword.get(opts, :help, false) do
       show_help()
+      System.halt(0)
+    end
+
+    if Keyword.get(opts, :dashboard, false) do
+      ZimageClient.Dashboard.start()
       System.halt(0)
     end
 
@@ -89,11 +96,12 @@ defmodule ZimageClient.CLI do
 
   defp show_help do
     IO.puts("""
-    ZimageClient - Request image generation via Zenoh
+    ZimageClient - Request image generation and monitor services via Zenoh
 
     USAGE:
       zimage_client "prompt" [options]
       zimage_client --batch "prompt1" "prompt2" [options]
+      zimage_client --dashboard
 
     OPTIONS:
       -w, --width WIDTH          Image width (default: 1024)
@@ -103,12 +111,14 @@ defmodule ZimageClient.CLI do
       --guidance-scale SCALE     Guidance scale (default: 0.0)
       --output-format FORMAT     Output format: png, jpg, jpeg (default: png)
       -b, --batch                Batch mode - multiple prompts
+      -d, --dashboard            Launch service dashboard to monitor active AI services
       --help                     Show this help
 
     EXAMPLES:
       zimage_client "a beautiful sunset"
       zimage_client "a cat wearing a hat" --width 512 --height 512
       zimage_client --batch "cat" "dog" "bird" --width 256
+      zimage_client --dashboard
     """)
   end
 end

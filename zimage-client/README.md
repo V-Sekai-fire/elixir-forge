@@ -1,6 +1,6 @@
 # ZimageClient
 
-A Zenoh client for requesting image generation from Zimage services.
+A Zenoh client for requesting image generation from Zimage services and monitoring the Forge fabric.
 
 ## Installation
 
@@ -23,6 +23,9 @@ mix escript.build
 
 # Batch generation
 ./zimage_client --batch "cat" "dog" "bird" --width 256
+
+# Launch service dashboard
+./zimage_client --dashboard
 ```
 
 ### Elixir API
@@ -58,6 +61,7 @@ ZimageClient.Application.start(:normal, [])
 - `--guidance-scale`: Guidance scale (default: 0.0)
 - `--output-format`: png, jpg, jpeg (default: png)
 - `--batch`, `-b`: Process multiple prompts
+- `--dashboard`, `-d`: Launch service dashboard to monitor active AI services
 - `--help`: Show help
 
 ## Architecture
