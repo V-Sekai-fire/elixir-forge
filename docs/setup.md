@@ -1,6 +1,6 @@
 # Setup and Deployment Guide
 
-This guide covers setting up and deploying Livebook Nx in various environments.
+This guide covers setting up and deploying Forge in various environments.
 
 ## Prerequisites
 
@@ -36,7 +36,7 @@ Run the provided setup script:
 ```bash
 # Clone repository
 git clone <repository-url>
-cd livebook-nx
+cd forge
 
 # Run automated setup
 elixir setup.exs
@@ -83,7 +83,7 @@ Create `.env` file or set environment variables:
 
 ```bash
 # Database (optional)
-export DATABASE_URL="postgresql://user:pass@localhost:26257/livebook_nx"
+export DATABASE_URL="postgresql://user:pass@localhost:26257/forge"
 
 # SeaweedFS (optional)
 export SEAWEEDFS_MASTER="http://localhost:9333"

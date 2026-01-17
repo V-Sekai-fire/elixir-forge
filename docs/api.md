@@ -1,6 +1,6 @@
-# Livebook Nx API Reference
+# Forge API Reference
 
-This document provides comprehensive API documentation for the Livebook Nx platform.
+This document provides comprehensive API documentation for the Forge platform.
 
 ## Core Modules
 

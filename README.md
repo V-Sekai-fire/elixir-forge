@@ -11,41 +11,14 @@ A comprehensive computation platform featuring multi-modal computing models incl
 - **Vision-Language Processing**: Qwen3-VL model for image understanding and description
 - **Synchronous Processing**: Direct execution without job queues or databases
 - **Multi-Modal Pipeline**: End-to-end automated workflows combining generation and analysis
-- **Production Ready**: Containerized deployment with optimized performance
+- **Script-Based Execution**: Standalone Elixir scripts for flexible processing
 
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies
-mix deps.get
-mix compile
-
-# Run inference immediately
-mix qwen3vl image.jpg "What do you see?"
-mix zimage "a beautiful sunset"
-```
-
-```bash
-# Install dependencies
-mix deps.get
-mix compile
-
-### Run Inference
-
-```bash
-# Describe an image
-mix qwen3vl image.jpg "What do you see?"
-
-# Generate an image
-mix zimage "a beautiful sunset over mountains"
-```
-
-### Additional Command Options
-
-```bash
-# With custom options
-mix qwen3vl photo.png "Analyze in detail" --max-tokens 200 --temperature 0.8
-mix zimage "fantasy landscape" --width 1024 --height 512 --seed 42
+# Run inference directly
+elixir elixir/qwen3vl_inference.exs image.jpg "What do you see?"
+elixir elixir/zimage_generation.exs "a beautiful sunset"
 ```
 
 ## �📚 Documentation
@@ -59,38 +32,24 @@ mix zimage "fantasy landscape" --width 1024 --height 512 --seed 42
 
 ```
 Forge
-├── Core Application (Elixir)
-│   ├── Z-Image Inference Engine
-│   ├── Qwen3-VL Vision-Language Engine
-│   └── Synchronous Processing
-├── Processing Models
-│   ├── Z-Image-Turbo (Image Generation)
-│   └── Qwen3-VL (Vision Analysis)
-└── Third-Party Tools
-    ├── Mesh Processing
-    ├── Audio Synthesis
-    ├── Image Generation
-    └── Character Rigging
+├── Elixir Scripts
+│   ├── qwen3vl_inference.exs (Vision-Language Processing)
+│   ├── zimage_generation.exs (Image Generation)
+│   ├── kokoro_tts_generation.exs (Text-to-Speech)
+│   ├── sam3_video_segmentation.exs (Video Processing)
+│   └── Other AI Processing Scripts
+├── Third-Party Tools
+│   ├── Mesh Processing
+│   ├── Audio Synthesis
+│   ├── Image Generation
+│   └── Character Rigging
+└── Documentation
+    ├── Proposals
+    ├── Setup Guides
+    └── API References
 ```
 
-**Note**: Third-party tools are optional integrations.
-
-## 🐳 Deployment
-
-### Docker
-
-```bash
-docker build -t forge .
-docker run -p 4000:4000 forge
-```
-
-### Docker Compose
-
-```bash
-docker-compose up -d
-```
-
-See [Setup Guide](docs/setup.md) for detailed deployment instructions.
+**Note**: Third-party tools are optional integrations. Scripts run independently.
 
 ## 🤝 Contributing
 
@@ -103,5 +62,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙋 Support
 
 - 📖 [Documentation](docs/)
-- 🐛 [Issues](https://github.com/your-org/forge/issues)
-- 💬 [Discussions](https://github.com/your-org/forge/discussions)
+- 🐛 [Issues](https://github.com/V-Sekai-fire/forge/issues)
+- 💬 [Discussions](https://github.com/V-Sekai-fire/forge/discussions)

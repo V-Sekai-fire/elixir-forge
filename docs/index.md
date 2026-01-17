@@ -1,10 +1,10 @@
-# Livebook Nx Documentation
+# Forge Documentation
 
-Welcome to the Livebook Nx documentation. This comprehensive guide covers everything you need to know about setting up, using, and extending the Livebook Nx AI inference platform.
+Welcome to the Forge documentation. This comprehensive guide covers everything you need to know about setting up, using, and extending the Forge AI inference platform.
 
 ## Quick Start
 
-New to Livebook Nx? Start here:
+New to Forge? Start here:
 
 1. **[Setup Guide](setup.md)** - Installation and deployment instructions
 2. **[User Guide](user-guide.md)** - Core features and usage examples
@@ -66,11 +66,11 @@ New to Livebook Nx? Start here:
 ## Architecture
 
 ```
-Livebook Nx
-├── Core Application (Elixir/Phoenix)
-│   ├── Qwen3-VL Inference Engine
-│   ├── Job Queue (Oban)
-│   └── Database Layer (Ecto)
+Forge
+├── Elixir Scripts
+│   ├── qwen3vl_inference.exs
+│   ├── zimage_generation.exs
+│   └── Other AI Processing Scripts
 ├── Distributed Storage
 │   ├── CockroachDB (Metadata)
 │   └── SeaweedFS (Files)
