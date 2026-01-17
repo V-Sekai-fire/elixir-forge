@@ -40,18 +40,18 @@ async def main():
                 # Process inference (placeholder)
                 output_path = await process_inference(prompt, width, height, seed, num_steps, guidance_scale, output_format)
 
-                # Serialize response FlatBuffer
+                # Serialize response FlatBuffer (glTF2 extensions style)
                 # result_data: generated image bytes (or empty if using path approach)
-                # metadata: FlexBuffer with status and output_path
+                # extensions: FlexBuffer map for extensible data (status, output_path, etc.)
                 import flatbuffers_builder as fb  # Placeholder
                 builder = fb.Builder(1024)
                 fb.InferenceResponse.Start(builder)
                 result_data_vec = builder.CreateByteVector(b"")  # Empty for now, send image bytes here later
-                metadata_dict = {"status": "success", "output_path": output_path}
-                metadata_bytes = flexbuffers.dumps(metadata_dict)
-                metadata_vec = builder.CreateByteVector(metadata_bytes)
+                extensions_dict = {"status": "success", "output_path": output_path}
+                extensions_bytes = flexbuffers.dumps(extensions_dict)
+                extensions_vec = builder.CreateByteVector(extensions_bytes)
                 fb.InferenceResponse.AddResultData(builder, result_data_vec)
-                fb.InferenceResponse.AddMetadata(builder, metadata_vec)
+                fb.InferenceResponse.AddExtensions(builder, extensions_vec)
                 response_fb = fb.InferenceResponse.End(builder)
                 builder.Finish(response_fb)
                 encoded = builder.Output()
@@ -59,15 +59,15 @@ async def main():
                 # Reply with FlatBuffer
                 await query.reply(encoded)
             else:
-                # Error response
+                # Error response (glTF2 extensions style)
                 builder = fb.Builder(512)
                 fb.InferenceResponse.Start(builder)
                 result_data_vec = builder.CreateByteVector(b"")
                 error_dict = {"status": "error", "reason": "Invalid request format"}
-                metadata_bytes = flexbuffers.dumps(error_dict)
-                metadata_vec = builder.CreateByteVector(metadata_bytes)
+                extensions_bytes = flexbuffers.dumps(error_dict)
+                extensions_vec = builder.CreateByteVector(extensions_bytes)
                 fb.InferenceResponse.AddResultData(builder, result_data_vec)
-                fb.InferenceResponse.AddMetadata(builder, metadata_vec)
+                fb.InferenceResponse.AddExtensions(builder, extensions_vec)
                 response_fb = fb.InferenceResponse.End(builder)
                 builder.Finish(response_fb)
                 encoded = builder.Output()

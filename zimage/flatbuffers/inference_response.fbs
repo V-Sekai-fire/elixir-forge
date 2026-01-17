@@ -1,7 +1,7 @@
-// inference_response.fbs
+// inference_response.fbs - glTF2-style extensions
 table InferenceResponse {
   result_data:[ubyte];
-  metadata:[ubyte];  // FlexBuffer binary for unknown data
+  extensions:[ubyte];  // FlexBuffer map for glTF2-style extensions
 }
 
 root_type InferenceResponse;

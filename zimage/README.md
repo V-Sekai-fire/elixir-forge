@@ -39,15 +39,15 @@ python inference_service.py
 
 ## Data Serialization
 
-The service uses efficient binary serialization:
+The service uses efficient binary serialization with glTF2-style extensions:
 - **FlatBuffers**: For known schemas (request parameters, response structure)
-- **FlexBuffers**: For unknown metadata (dynamic status info, compatible across languages)
+- **FlexBuffers**: For extensions (dynamic status info, compatible across languages like glTF2 extensions/extras)
 
 Schemas:
-- `flatbuffers/inference_request.fbs`: Request format  
-- `flatbuffers/inference_response.fbs`: Response with FlexBuffer metadata
+- `flatbuffers/inference_request.fbs`: Request format
+- `flatbuffers/inference_response.fbs`: Response with FlexBuffer extensions map
 
-This provides zero-copy efficiency for image data while remaining flexible for API evolution.
+This provides zero-copy efficiency for image data while maintaining extensible metadata following 3D standards.
 
 ## Architecture
 
