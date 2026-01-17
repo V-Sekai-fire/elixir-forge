@@ -23,19 +23,27 @@ cp zenohd.service ~/.config/systemd/user/
 
 **OR** edit manually to adjust paths:
 
-Edit `~/.config/systemd/user/zenohd.service` to match your zenohd installation:
+The provided `zenohd.service` template already uses the correct Cargo path `~/.cargo/bin/zenohd`. However, if you installed zenohd differently, you can edit the ExecStart path:
+
+```bash
+systemctl --user edit zenohd
+```
+
+Then modify the [Service] section:
 
 ```ini
 [Service]
-# If installed via cargo (default):
+# For Cargo installation (automatic in template):
 ExecStart=%h/.cargo/bin/zenohd --listen tcp/[::]:7447 --rest-api
 
 # If installed system-wide:
 ExecStart=zenohd --listen tcp/[::]:7447 --rest-api
 
-# If installed to custom path (e.g. /usr/local/bin):
-ExecStart=/usr/local/bin/zenohd --listen tcp/[::]:7447 --rest-api
+# If installed to custom path:
+ExecStart=/custom/path/to/zenohd --listen tcp/[::]:7447 --rest-api
 ```
+
+The `%h` in systemd represents your home directory, so `%h/.cargo/bin/zenohd` expands to `$HOME/.cargo/bin/zenohd`.
 
 ### 2. Reload systemd User Daemon
 

@@ -5,9 +5,10 @@ After=network.target
 
 [Service]
 Type=simple
-# Adjust zenohd path if installed somewhere else
+# Primary: zenohd installed by Cargo to ~/.cargo/bin
 ExecStart=%h/.cargo/bin/zenohd --listen tcp/[::]:7447 --rest-api
 # Alternative if installed system-wide: ExecStart=zenohd --listen tcp/[::]:7447 --rest-api
+# Alternative if installed elsewhere: ExecStart=/custom/path/to/zenohd --listen tcp/[::]:7447 --rest-api
 Restart=on-failure
 RestartSec=5
 
