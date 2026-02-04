@@ -68,19 +68,31 @@ thirdparty/*_temp_rignet.mtl
 thirdparty/*_temp_rignet_rig.txt
 thirdparty/*_simplified.obj
 
-# UniRig processing artifacts
-thirdparty/UniRig/logs/
-thirdparty/UniRig/lightning_logs/
-thirdparty/UniRig/erl_crash.dump
-thirdparty/UniRig/examples/**/*.fbx
-thirdparty/UniRig/examples/**/*.obj
-!thirdparty/UniRig/examples/**/*.npz
-!thirdparty/UniRig/examples/**/*.glb
+# Apps tools third-party processing temporary files
+apps_tools/*/**/thirdparty/*_temp_*.obj
+apps_tools/*/**/thirdparty/*_temp_*.binvox
+apps_tools/*/**/thirdparty/*_temp_*.mtl
+apps_tools/*/**/thirdparty/*_normalized.obj
+apps_tools/*/**/thirdparty/*_normalized.binvox
+apps_tools/*/**/thirdparty/*_temp_rignet.obj
+apps_tools/*/**/thirdparty/*_temp_rignet_normalized.obj
+apps_tools/*/**/thirdparty/*_temp_rignet_normalized.binvox
+apps_tools/*/**/thirdparty/*_temp_rignet.mtl
+apps_tools/*/**/thirdparty/*_temp_rignet_rig.txt
+apps_tools/*/**/thirdparty/*_simplified.obj
+
+# UniRig processing artifacts (moved to apps_tools)
+apps_tools/unirig_generation/thirdparty/UniRig/logs/
+apps_tools/unirig_generation/thirdparty/UniRig/lightning_logs/
+apps_tools/unirig_generation/thirdparty/UniRig/erl_crash.dump
+apps_tools/unirig_generation/thirdparty/UniRig/examples/**/*.fbx
+apps_tools/unirig_generation/thirdparty/UniRig/examples/**/*.obj
+!apps_tools/unirig_generation/thirdparty/UniRig/examples/**/*.npz
+!apps_tools/unirig_generation/thirdparty/UniRig/examples/**/*.glb
 
 # Blender and 3D processing
 *.blend1
 *.blend2
-thirdparty/blender-meshoptimizer/meshoptimizer/
 
 # Jupyter/Notebook files
 .ipynb_checkpoints/
