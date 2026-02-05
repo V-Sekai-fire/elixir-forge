@@ -11,13 +11,14 @@
 #   elixir tris_to_quads_converter.exs <input_file> [options]
 #
 # Supported Input Formats: GLB, GLTF, USD (usd, usda, usdc), FBX
-# Supported Output Format: USDC (binary only)
+# Supported Output Formats: USDC (binary), USDA (text)
 #
-# Note: Output is always binary USDC format to preserve quads and materials
-#       with optimal performance and file size. Embedded images are supported.
+# Note: USDC provides optimal performance and file size with embedded images.
+#       USDA provides human-readable text format for debugging and editing.
+#       Both formats preserve quads, materials, and vertex groups (bone weights).
 #
 # Options:
-#   --output, -o <path>        Output USDC file path (default: input file with _quads.usdc suffix)
+#   --output, -o <path>        Output file path (default: input file with _quads.usdc suffix)
 #   --help, -h                 Show this help message
 
 # Configure OpenTelemetry for console-only logging
@@ -66,18 +67,19 @@ defmodule ArgsParser do
       elixir tris_to_quads_converter.exs <input_file> [options]
 
     Supported Input Formats: GLB, GLTF, USD (usd, usda, usdc), FBX
-    Supported Output Format: USDC (binary only)
+    Supported Output Formats: USDC (binary), USDA (text)
 
-    Note: Output is always binary USDC format to preserve quads and materials
-          with optimal performance and file size. Embedded images are supported.
-          FBX export is not supported (materials are lost).
+    Note: USDC provides optimal performance and file size with embedded images.
+          USDA provides human-readable text format for debugging and editing.
+          Both formats preserve quads, materials, and vertex groups (bone weights).
 
     Options:
-      --output, -o <path>        Output USDC file path (default: input file with _quads.usdc suffix)
+      --output, -o <path>        Output file path (default: input file with _quads.usdc suffix)
       --help, -h                 Show this help message
 
     Example:
       elixir tris_to_quads_converter.exs model.glb -o model_quads.usdc
+      elixir tris_to_quads_converter.exs model.glb -o model_quads.usda
       elixir tris_to_quads_converter.exs model.fbx
       elixir tris_to_quads_converter.exs model.usda
       elixir tris_to_quads_converter.exs model.usd
@@ -130,11 +132,11 @@ defmodule ArgsParser do
     use_timestamped_folder = !output_path || output_path == ""
 
     output_path = if output_path && output_path != "" do
-      # Validate output format - only USDC allowed
+      # Validate output format - USDC or USDA allowed
       output_ext = String.downcase(Path.extname(output_path))
-      if output_ext != ".usdc" do
-        IO.puts("Error: Only USDC output format is supported: #{output_ext}")
-        IO.puts("Please use .usdc extension for output file")
+      if output_ext not in [".usdc", ".usda"] do
+        IO.puts("Error: Only USDC and USDA output formats are supported: #{output_ext}")
+        IO.puts("Please use .usdc (binary) or .usda (text) extension for output file")
         System.halt(1)
       end
       output_path
@@ -442,52 +444,61 @@ if total_converted == 0:
     print("\n✗ Error: No meshes were processed")
     raise ValueError("No meshes processed")
 
-# Force USDC output format (only format supported)
+# Determine output format and export accordingly
 output_ext = Path(output_path).suffix.lower()
-if output_ext != '.usdc':
-    # Change output to binary USDC format
-    base = Path(output_path).stem
-    output_path = str(Path(output_path).parent / f"{base}.usdc").replace("\\", "/")
-    if quads_were_converted:
-        print(f"\n⚠ Quads were converted - switching output to binary USDC format: {output_path}")
-    else:
-        print(f"\n⚠ Output format changed to binary USDC: {output_path}")
+is_usda = output_ext == '.usda'
+is_usdc = output_ext == '.usdc'
 
-# Validate output format - only USDC allowed
-output_ext = Path(output_path).suffix.lower()
-if output_ext != '.usdc':
-    print(f"\n✗ Error: Only USDC output format is supported, got: {output_ext}")
-    print("  Please use .usdc extension for output file")
-    raise ValueError(f"Only USDC output format supported, got: {output_ext}")
+if not (is_usda or is_usdc):
+    print(f"\n✗ Error: Unsupported output format: {output_ext}")
+    print("  Supported formats: .usdc (binary), .usda (text)")
+    raise ValueError(f"Unsupported output format: {output_ext}")
 
-print(f"\n=== Exporting USDC: {output_path} ===")
+print(f"\n=== Exporting {output_ext.upper()}: {output_path} ===")
 
 # Ensure output directory exists
 output_dir = os.path.dirname(output_path)
 if output_dir and not os.path.exists(output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
-# Export as binary USDC
+# Export based on format
 try:
-    # Binary USDC export with embedded images and material preservation
-    # Using only essential parameters that are valid in Blender 4.5
-    # Note: Texture embedding is controlled by relative_paths=False
-    # Note: export_armatures=False means we don't export armature objects,
-    #       but vertex groups (bone weights) are still exported with meshes
-    #       All vertex group influences are preserved (no 4-bone limit)
-    bpy.ops.wm.usd_export(
-        filepath=output_path,
-        export_materials=True,
-        export_textures=True,
-        relative_paths=False,  # False = embed textures, True = use relative paths
-        export_uvmaps=True,
-        export_armatures=False,  # Don't export armature objects, but vertex groups are preserved
-        selected_objects_only=False,
-        visible_objects_only=False,
-        use_instancing=False,
-        evaluation_mode='RENDER'
-    )
-    print(f"✓ Binary USDC exported successfully: {output_path}")
+    if is_usdc:
+        # Binary USDC export with embedded images and material preservation
+        # Using only essential parameters that are valid in Blender 4.5
+        # Note: Texture embedding is controlled by relative_paths=False
+        # Note: export_armatures=False means we don't export armature objects,
+        #       but vertex groups (bone weights) are still exported with meshes
+        #       All vertex group influences are preserved (no 4-bone limit)
+        bpy.ops.wm.usd_export(
+            filepath=output_path,
+            export_materials=True,
+            export_textures=True,
+            relative_paths=False,  # False = embed textures, True = use relative paths
+            export_uvmaps=True,
+            export_armatures=False,  # Don't export armature objects, but vertex groups are preserved
+            selected_objects_only=False,
+            visible_objects_only=False,
+            use_instancing=False,
+            evaluation_mode='RENDER'
+        )
+        print(f"✓ Binary USDC exported successfully: {output_path}")
+    elif is_usda:
+        # Text USDA export - human readable format
+        # USDA export has different parameters than USDC
+        bpy.ops.wm.usd_export(
+            filepath=output_path,
+            export_materials=True,
+            export_textures=False,  # USDA doesn't embed textures, uses relative paths
+            relative_paths=True,    # Use relative paths for textures in USDA
+            export_uvmaps=True,
+            export_armatures=False, # Don't export armature objects, but vertex groups are preserved
+            selected_objects_only=False,
+            visible_objects_only=False,
+            use_instancing=False,
+            evaluation_mode='RENDER'
+        )
+        print(f"✓ Text USDA exported successfully: {output_path}")
 except Exception as e:
     print(f"✗ Error exporting: {e}")
     import traceback
@@ -497,10 +508,12 @@ except Exception as e:
 print("\n=== Complete ===")
 if quads_were_converted:
     print(f"Converted {total_edges_converted} edge pairs to quads in {total_converted} mesh object(s)")
-    print(f"Saved to: {output_path} (binary USDC format preserves quads and materials)")
+    format_desc = "binary USDC format" if is_usdc else "text USDA format"
+    print(f"Saved to: {output_path} ({format_desc} preserves quads and materials)")
 else:
     print(f"Processed {total_converted} mesh object(s) (no quads converted)")
-    print(f"Saved to: {output_path} (binary USDC format)")
+    format_desc = "binary USDC format" if is_usdc else "text USDA format"
+    print(f"Saved to: {output_path} ({format_desc})")
 
 if use_timestamped_folder:
     export_dir_name = Path(output_path).parent.name

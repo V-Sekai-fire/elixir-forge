@@ -1,0 +1,75 @@
+import json
+import os
+import sys
+import logging
+from pathlib import Path
+from PIL import Image
+import torch
+from diffusers import DiffusionPipeline
+
+logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+logging.getLogger("transformers").setLevel(logging.ERROR)
+logging.getLogger("diffusers").setLevel(logging.ERROR)
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+
+from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore")
+
+_original_tqdm_init = tqdm.__init__
+def _silent_tqdm_init(self, *args, **kwargs):
+    kwargs['disable'] = True
+    return _original_tqdm_init(self, *args, **kwargs)
+tqdm.__init__ = _silent_tqdm_init
+
+cpu_count = os.cpu_count()
+half_cpu_count = cpu_count // 2
+os.environ["MKL_NUM_THREADS"] = str(half_cpu_count)
+os.environ["OMP_NUM_THREADS"] = str(half_cpu_count)
+torch.set_num_threads(half_cpu_count)
+
+MODEL_ID = "Tongyi-MAI/Z-Image-Turbo"
+
+# Device selection will be handled in generate_code template with config
+# For now, prepare to use GPU when available
+device = "cuda" if torch.cuda.is_available() else "cpu"
+dtype = torch.float16 if device == "cuda" else torch.float32
+
+print(f"[INFO] Preparing for device: {device} (dtype: {dtype})")
+
+# Performance optimizations (from Exa best practices)
+if device == "cuda":
+    torch.set_float32_matmul_precision("high")
+    # Torch inductor optimizations for maximum speed
+    torch._inductor.config.conv_1x1_as_mm = True
+    torch._inductor.config.coordinate_descent_tuning = True
+    torch._inductor.config.epilogue_fusion = False
+    torch._inductor.config.coordinate_descent_check_all_directions = True
+
+# For test environment, always load from Hugging Face Hub
+print(f"Loading from Hugging Face Hub: {MODEL_ID}")
+pipe = DiffusionPipeline.from_pretrained(
+    MODEL_ID,
+    torch_dtype=dtype
+)
+
+pipe = pipe.to(device)
+
+# Performance optimizations for 2x speed (from Exa)
+if device == "cuda":
+    # Memory format optimization
+    try:
+        pipe.transformer.to(memory_format=torch.channels_last)
+        if hasattr(pipe, 'vae') and hasattr(pipe.vae, 'decode'):
+            pipe.vae.to(memory_format=torch.channels_last)
+        print("[OK] Memory format optimized (channels_last)")
+    except Exception as e:
+        print(f"[INFO] Memory format optimization: {e}")
+
+    # torch.compile is disabled due to CUDA stream issues
+    print("[INFO] torch.compile disabled (causes CUDA stream issues with current setup)")
+else:
+    print("[INFO] torch.compile not applicable for CPU generation")
+
+print(f"[OK] Pipeline loaded on {device} with dtype {dtype}")

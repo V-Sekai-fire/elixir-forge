@@ -79,11 +79,9 @@ defmodule ZImageGeneration.Generator do
         export_dir = Path.join(output_dir, tag)
         File.mkdir_p!(export_dir)
 
-        # Load pipeline (reusing from original implementation)
-        load_code = create_load_code()
-
-        # Generate with pipeline
-        generate_code = create_generate_code(data, tag)
+        # Render EEx templates for Python code
+        load_code = render_template("load_code", %{})
+        generate_code = render_template("generate_code", %{})
 
         # Pass config data via globals to avoid JSON parsing issues
         config_data = Jason.encode!(%{
@@ -121,158 +119,11 @@ defmodule ZImageGeneration.Generator do
     end
   end
 
-  defp create_load_code do
-    ~S"""
-import json
-import os
-import sys
-import logging
-from pathlib import Path
-from PIL import Image
-import torch
-from diffusers import DiffusionPipeline
-
-logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
-logging.getLogger("transformers").setLevel(logging.ERROR)
-logging.getLogger("diffusers").setLevel(logging.ERROR)
-os.environ["TRANSFORMERS_VERBOSITY"] = "error"
-os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
-
-from tqdm import tqdm
-import warnings
-warnings.filterwarnings("ignore")
-
-_original_tqdm_init = tqdm.__init__
-def _silent_tqdm_init(self, *args, **kwargs):
-    kwargs['disable'] = True
-    return _original_tqdm_init(self, *args, **kwargs)
-tqdm.__init__ = _silent_tqdm_init
-
-cpu_count = os.cpu_count()
-half_cpu_count = cpu_count // 2
-os.environ["MKL_NUM_THREADS"] = str(half_cpu_count)
-os.environ["OMP_NUM_THREADS"] = str(half_cpu_count)
-torch.set_num_threads(half_cpu_count)
-
-MODEL_ID = "Tongyi-MAI/Z-Image-Turbo"
-
-# Always use CPU for test environment - simplified device detection
-print("[INFO] Using CPU-only mode for test environment")
-device = "cpu"
-dtype = torch.float32
-
-# Performance optimizations (from Exa best practices)
-if device == "cuda":
-    torch.set_float32_matmul_precision("high")
-    # Torch inductor optimizations for maximum speed
-    torch._inductor.config.conv_1x1_as_mm = True
-    torch._inductor.config.coordinate_descent_tuning = True
-    torch._inductor.config.epilogue_fusion = False
-    torch._inductor.config.coordinate_descent_check_all_directions = True
-
-# For test environment, always load from Hugging Face Hub
-print(f"Loading from Hugging Face Hub: {MODEL_ID}")
-pipe = DiffusionPipeline.from_pretrained(
-    MODEL_ID,
-    torch_dtype=dtype
-)
-
-pipe = pipe.to(device)
-
-# Performance optimizations for 2x speed (from Exa)
-if device == "cuda":
-    # Memory format optimization
-    try:
-        pipe.transformer.to(memory_format=torch.channels_last)
-        if hasattr(pipe, 'vae') and hasattr(pipe.vae, 'decode'):
-            pipe.vae.to(memory_format=torch.channels_last)
-        print("[OK] Memory format optimized (channels_last)")
-    except Exception as e:
-        print(f"[INFO] Memory format optimization: {e}")
-
-    # torch.compile is disabled due to CUDA stream issues
-    print("[INFO] torch.compile disabled (causes CUDA stream issues with current setup)")
-else:
-    print("[INFO] torch.compile not applicable for CPU generation")
-
-print(f"[OK] Pipeline loaded on {device} with dtype {dtype}")
-
-"""
+  # Render EEx template from priv/templates directory
+  defp render_template(template_name, assigns) do
+    template_path = Application.app_dir(:zimage_generation, "priv/templates/#{template_name}.eex")
+    EEx.eval_file(template_path, assigns: assigns)
   end
-
-  defp create_generate_code(_data, _tag) do
-    ~S"""
-# Process generation
-import json
-import time
-from pathlib import Path
-from PIL import Image
-
-# Read configuration from globals
-config = json.loads(config_json)
-
-prompt = config.get('prompt')
-width = config.get('width', 1024)
-height = config.get('height', 1024)
-seed = config.get('seed', 0)
-num_steps = config.get('num_steps', 4)
-guidance_scale = config.get('guidance_scale', 0.0)
-output_format = config.get('output_format', 'png')
-tag = config.get('tag')
-
-output_dir = Path("output")
-tag = time.strftime("%Y%m%d_%H_%M_%S")
-export_dir = output_dir / tag
-export_dir.mkdir(exist_ok=True)
-
-generator = torch.Generator(device=device)
-if seed == 0:
-    seed = generator.seed()
-else:
-    generator.manual_seed(seed)
-
-# Generate image
-print(f"[INFO] Starting generation: {prompt[:50]}...")
-print(f"[INFO] Parameters: {width}x{height}, {num_steps} steps, seed={seed}")
-print("[INFO] Generating (optimized for speed)...")
-import sys
-sys.stdout.flush()
-
-# Use inference_mode for faster execution (2x speed)
-with torch.inference_mode() if hasattr(torch.cuda, 'is_available') else torch.no_grad():
-    output = pipe(
-        prompt=prompt,
-        width=width,
-        height=height,
-        num_inference_steps=num_steps,
-        guidance_scale=guidance_scale,
-        generator=generator,
-    )
-
-print("[INFO] Generation complete, processing image...")
-sys.stdout.flush()
-
-image = output.images[0]
-
-output_filename = f"zimage_{tag}.{output_format}"
-output_path = export_dir / output_filename
-
-if output_format.lower() in ["jpg", "jpeg"]:
-    if image.mode == "RGBA":
-        background = Image.new("RGB", image.size, (255, 255, 255))
-        background.paste(image, mask=image.split()[3] if image.mode == "RGBA" else None)
-        image = background
-    image.save(str(output_path), "JPEG", quality=95)
-else:
-    image.save(str(output_path), "PNG")
-
-print(f"[OK] Saved image to {output_path}")
-str(output_path)
-
-"""
-  end
-
-
 
   defp time_tag do
     NaiveDateTime.utc_now()
