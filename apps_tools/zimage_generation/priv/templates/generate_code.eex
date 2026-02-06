@@ -1,0 +1,77 @@
+# Process generation
+import json
+import time
+from pathlib import Path
+from PIL import Image
+
+# Read configuration from globals
+config = json.loads(config_json)
+
+prompt = config.get('prompt')
+width = config.get('width', 1024)
+height = config.get('height', 1024)
+seed = config.get('seed', 0)
+num_steps = config.get('num_steps', 4)
+guidance_scale = config.get('guidance_scale', 0.0)
+output_format = config.get('output_format', 'png')
+tag = config.get('tag')
+force_cpu = config.get('force_cpu', False)
+
+# Final device determination based on config and availability
+final_device = "cpu" if force_cpu else device  # Use CPU if forced, otherwise use what was prepared
+
+if force_cpu:
+    print("[INFO] Using CPU mode (forced by configuration)")
+elif final_device == "cuda":
+    print("[INFO] Using GPU mode for image generation")
+else:
+    print("[INFO] Using CPU mode (GPU not available)")
+
+output_dir = Path("output")
+tag = time.strftime("%Y%m%d_%H_%M_%S")
+export_dir = output_dir / tag
+export_dir.mkdir(exist_ok=True)
+
+generator = torch.Generator(device=final_device)
+if seed == 0:
+    seed = generator.seed()
+else:
+    generator.manual_seed(seed)
+
+# Generate image
+print(f"[INFO] Starting generation: {prompt[:50]}...")
+print(f"[INFO] Parameters: {width}x{height}, {num_steps} steps, seed={seed}")
+print("[INFO] Generating (optimized for speed)...")
+import sys
+sys.stdout.flush()
+
+# Use inference_mode for faster execution (2x speed)
+with torch.inference_mode() if hasattr(torch.cuda, 'is_available') else torch.no_grad():
+    output = pipe(
+        prompt=prompt,
+        width=width,
+        height=height,
+        num_inference_steps=num_steps,
+        guidance_scale=guidance_scale,
+        generator=generator,
+    )
+
+print("[INFO] Generation complete, processing image...")
+sys.stdout.flush()
+
+image = output.images[0]
+
+output_filename = f"zimage_{tag}.{output_format}"
+output_path = export_dir / output_filename
+
+if output_format.lower() in ["jpg", "jpeg"]:
+    if image.mode == "RGBA":
+        background = Image.new("RGB", image.size, (255, 255, 255))
+        background.paste(image, mask=image.split()[3] if image.mode == "RGBA" else None)
+        image = background
+    image.save(str(output_path), "JPEG", quality=95)
+else:
+    image.save(str(output_path), "PNG")
+
+print(f"[OK] Saved image to {output_path}")
+str(output_path)
